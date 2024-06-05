@@ -1,0 +1,27 @@
+name: args_macro
+description: Generates a parser for command-line arguments based on your data class.
+repository: https://github.com/alexeyinkin/dart-args-macro.git
+version: 0.1.0-1.dev
+
+environment:
+  sdk: ^3.5.0-202
+
+topics:
+  - cli
+  - macros
+
+dependencies:
+  args: ^2.5.0
+  common_macros: ^0.1.0-1.dev
+  macro_util: ^0.1.0-2.dev
+  #  macros: ^0.1.1-main.0 # 202
+  macros: ^0.1.0-main.5 # 164
+
+dev_dependencies:
+  show_augmentation: ^0.1.0-3.dev
+  test: ^1.25.5
+  test_util: ^0.1.0
+  total_lints: ^3.4.0
+
+#dependency_overrides:
+#  show_augmentation: { path: ../dart-show-augmentation }

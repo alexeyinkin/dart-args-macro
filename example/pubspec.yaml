@@ -1,0 +1,24 @@
+name: args_macro_example
+publish_to: none
+
+environment:
+  sdk: ^3.5.0-164
+
+dependencies:
+  args_macro: { path: .. }
+
+  # TODO: Move to the package
+  args: ^2.5.0
+  common_macros: ^0.1.0-1.dev
+  macro_util: ^0.1.0-2.dev
+  #  macros: ^0.1.1-main.0 # 202
+  macros: ^0.1.0-main.5 # 164
+
+dev_dependencies:
+  show_augmentation: ^0.1.0-3.dev
+  total_lints: ^3.4.0
+
+#dependency_overrides:
+#  common_macros: { path: ../../dart-common-macros }
+#  macro_util: { path: ../../dart-macro-util }
+#  show_augmentation: { path: ../../dart-show-augmentation }
