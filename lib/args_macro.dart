@@ -70,9 +70,9 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         [
           //
           intr.stringCode, ' toDebugString() {\n',
-          '  final buffer = ', intr.stringBufferCode, '();\n',
+          '  final buffer = ', intr.stringBufferCode, '();\n\n',
           for (final fieldIntr in intr.fields.values)
-            ..._fieldToDebugString(fieldIntr).indent(),
+            ...[..._fieldToDebugString(fieldIntr), '\n'].indent(),
           '  return buffer.toString();\n',
           '}\n',
         ].indent(),
@@ -88,6 +88,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       'buffer.write(": ");\n',
       'buffer.write(', fieldIntr.name, ');\n',
       'buffer.write(" (', className, ')");\n',
+      'buffer.writeln();\n',
     ];
   }
 
@@ -191,6 +192,8 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
 
     switch (classDecl.identifier.name) {
       case 'String':
+      case 'int':
+      case 'double':
         return _getParserInitializationForString(
           field: field,
           optionName: optionName,
@@ -232,21 +235,60 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     return [
       //
       name, ' parse(', intr.listCode, '<', intr.stringCode, '> argv) {\n',
-      '  final wrapped = _parseWrapped(argv);\n',
-      '  return $name(\n',
+      '  try {\n',
+      '    final wrapped = _parseWrapped(argv);\n',
+      '    return $name(\n',
       for (final fieldIntr in intr.fields.values)
-        ..._getConstructionParam(fieldIntr).indent(4),
-      '  );\n',
+        ...[..._getConstructionParam(intr, fieldIntr), '\n'].indent(6),
+      '    );\n',
+      '  } on ', intr.argumentErrorCode, ' catch (e) {\n',
+      '    ', intr.stderrCode, '.writeln(e.message);', '\n',
+      '    ', intr.stderrCode, '.writeln();', '\n',
+      '    _printUsage(', intr.stderrCode, ');\n',
+      '    ', intr.exitCode, '(64);\n',
+      '  }\n',
       '}\n',
     ];
   }
 
-  List<Object> _getConstructionParam(FieldIntrospectionData fieldIntr) {
+  List<Object> _getConstructionParam(
+    _IntrospectionData intr,
+    FieldIntrospectionData fieldIntr,
+  ) {
+    final type = fieldIntr.unaliasedTypeDeclaration.identifier.name;
     final optionName = _camelToKebabCase(fieldIntr.name);
-    return [
-      fieldIntr.name,
-      ': wrapped.option(${jsonEncode(optionName)})!,\n',
-    ];
+
+    switch (type) {
+      case 'String':
+        return [
+          fieldIntr.name,
+          ': wrapped.option(${jsonEncode(optionName)})!,',
+        ];
+
+      case 'int':
+      case 'double':
+        final typeCode = switch (type) {
+          'int' => intr.intCode,
+          'double' => intr.doubleCode,
+          _ => throw Exception(),
+        };
+        return [
+          fieldIntr.name,
+          ': ',
+          typeCode,
+          '.tryParse(wrapped.option(${jsonEncode(optionName)})!)',
+          ' ?? (throw ',
+          intr.argumentErrorCode,
+          '.value(\n',
+          '  wrapped.option(${jsonEncode(optionName)}),\n',
+          '  "$optionName",\n',
+          '  "Cannot parse the value of \\"$optionName\\" into $type, \\"" + wrapped.option(${jsonEncode(optionName)})! + "\\" given.",\n',
+          ')',
+          '),',
+        ];
+    }
+
+    throw Exception('Parsing of $type into an argument value is unimplemented');
   }
 
   List<Object> _getParseWrapped(_IntrospectionData intr) {
@@ -263,11 +305,16 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       '\n',
       '  for (final option in parser.options.values) {\n',
       '    if (option.mandatory && !results.wasParsed(option.name)) {\n',
-      '      ', intr.stderrCode,
-      r'.writeln("Option \"${option.name}\" is mandatory.");', '\n',
-      '      ', intr.stderrCode, '.writeln();', '\n',
-      '      _printUsage(', intr.stderrCode, ');\n',
-      '      ', intr.exitCode, '(64);\n',
+      '      throw ', intr.argumentErrorCode, '.value(\n',
+      '        null,\n',
+      '        option.name,\n',
+      r'        "Option \"${option.name}\" is mandatory.",', '\n',
+      '      );\n',
+      // '      ', intr.stderrCode,
+      // r'.writeln("Option \"${option.name}\" is mandatory.");', '\n',
+      // '      ', intr.stderrCode, '.writeln();', '\n',
+      // '      _printUsage(', intr.stderrCode, ');\n',
+      // '      ', intr.exitCode, '(64);\n',
       '    }\n',
       '  }\n',
       '\n',
@@ -309,7 +356,10 @@ class _IntrospectionData {
     //
     required this.argParserCode,
     required this.argResultsCode,
+    required this.argumentErrorCode,
+    required this.doubleCode,
     required this.exitCode,
+    required this.intCode,
     required this.ioSinkCode,
     required this.listCode,
     required this.printCode,
@@ -324,7 +374,10 @@ class _IntrospectionData {
 
   final NamedTypeAnnotationCode argParserCode;
   final NamedTypeAnnotationCode argResultsCode;
+  final NamedTypeAnnotationCode argumentErrorCode;
+  final NamedTypeAnnotationCode doubleCode;
   final NamedTypeAnnotationCode exitCode;
+  final NamedTypeAnnotationCode intCode;
   final NamedTypeAnnotationCode ioSinkCode;
   final NamedTypeAnnotationCode listCode;
   final NamedTypeAnnotationCode printCode;
@@ -361,14 +414,21 @@ class _IntrospectionData {
       builder.resolveIdentifier(_coreLibrary, 'String'),
     ).wait;
 
-    final stringBuffer =
-        await builder.resolveIdentifier(_coreLibrary, 'StringBuffer');
+    final (argumentError, doublee, intt, stringBuffer) = await (
+      builder.resolveIdentifier(_coreLibrary, 'ArgumentError'),
+      builder.resolveIdentifier(_coreLibrary, 'double'),
+      builder.resolveIdentifier(_coreLibrary, 'int'),
+      builder.resolveIdentifier(_coreLibrary, 'StringBuffer')
+    ).wait;
 
     return _IntrospectionData(
       //
       argParserCode: NamedTypeAnnotationCode(name: argParse),
       argResultsCode: NamedTypeAnnotationCode(name: argResults),
+      argumentErrorCode: NamedTypeAnnotationCode(name: argumentError),
+      doubleCode: NamedTypeAnnotationCode(name: doublee),
       exitCode: NamedTypeAnnotationCode(name: exit),
+      intCode: NamedTypeAnnotationCode(name: intt),
       ioSinkCode: NamedTypeAnnotationCode(name: ioSink),
       listCode: NamedTypeAnnotationCode(name: list),
       printCode: NamedTypeAnnotationCode(name: print),
