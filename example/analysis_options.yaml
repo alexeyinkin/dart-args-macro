@@ -3,3 +3,6 @@ include: package:total_lints/app.yaml
 analyzer:
   enable-experiment:
     - macros
+
+  exclude:
+    - lib/error_*
