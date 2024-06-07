@@ -5,11 +5,18 @@ import 'package:common_macros/common_macros.dart';
 import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
-import '../util/codes.dart';
-import '../util/enum.dart';
-import '../util/libraries.dart';
-import '../util/resolved_identifiers.dart';
-import '../util/static_types.dart';
+import '../argument.dart';
+import '../arguments.dart';
+import '../codes.dart';
+import '../enum_introspection_data.dart';
+import '../introspection_data.dart';
+import '../libraries.dart';
+import '../resolved_identifiers.dart';
+import '../static_types.dart';
+import '../util.dart';
+import '../visitors/add_options_generator.dart';
+import '../visitors/parse_generator.dart';
+import '../visitors/to_debug_string_generator.dart';
 
 const _helpFlag = 'help';
 const _hFlag = 'h';
@@ -48,58 +55,44 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     MemberDeclarationBuilder builder,
   ) async {
     builder.log('buildDeclarationsForClass');
-    final intr = await _IntrospectionData.fill(clazz, builder);
+    final intr = await _introspect(clazz, builder);
 
-    await _declareConstructor(clazz, builder);
+    await _declareConstructors(clazz, builder);
     _declareToDebugString(builder, intr);
-    await _augmentParser(clazz, builder, intr);
+    _augmentParser(clazz, builder, intr);
   }
 
-  Future<void> _declareConstructor(
+  Future<void> _declareConstructors(
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
   ) async {
-    await const UnnamedConstructor().buildDeclarationsForClass(clazz, builder);
+    await Future.wait([
+      //
+      const Constructor().buildDeclarationsForClass(clazz, builder),
+
+      const Constructor(
+        name: 'withDefaults',
+        skipInitialized: true,
+      ).buildDeclarationsForClass(clazz, builder),
+    ]);
   }
 
   void _declareToDebugString(
     MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
+    IntrospectionData intr,
   ) {
-    final c = intr.codes;
-
     builder.declareInType(
       DeclarationCode.fromParts(
-        [
-          //
-          c.String, ' toDebugString() {\n',
-          '  final buffer = ', c.StringBuffer, '();\n\n',
-          for (final fieldIntr in intr.fields.values)
-            ...[..._fieldToDebugString(fieldIntr), '\n'].indent(),
-          '  return buffer.toString();\n',
-          '}\n',
-        ].indent(),
+        ToDebugStringGenerator(intr).generate().indent(),
       ),
     );
   }
 
-  List<Object> _fieldToDebugString(FieldIntrospectionData fieldIntr) {
-    final className = fieldIntr.unaliasedTypeDeclaration.identifier.name;
-    return [
-      //
-      'buffer.write(${jsonEncode(fieldIntr.name)});\n',
-      'buffer.write(": ");\n',
-      'buffer.write(', fieldIntr.name, ');\n',
-      'buffer.write(" (', className, ')");\n',
-      'buffer.writeln();\n',
-    ];
-  }
-
-  Future<void> _augmentParser(
+  void _augmentParser(
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-  ) async {
+    IntrospectionData intr,
+  ) {
     final parserName = _getParserName(clazz);
 
     builder.declareInLibrary(
@@ -108,8 +101,9 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         'augment class $parserName {\n',
         '  final parser = ', intr.codes.ArgParser, '();\n',
         ..._getConstructor(clazz).indent(),
-        ...(await _getInitializeParser(clazz, builder, intr)).indent(),
-        ...(await _getParse(clazz, builder, intr)).indent(),
+        ...AddOptionsGenerator(intr).generate().indent(),
+        ..._getAddHelpFlag().indent(),
+        ...ParseGenerator(clazz, intr).generate().indent(),
         ..._getParseWrapped(intr).indent(),
         ..._getPrintUsage(intr).indent(),
         '}\n',
@@ -128,283 +122,27 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     return [
       //
       parserName, '() {\n',
-      '  _initializeParser();\n',
+      '  _addOptions();\n',
+      '  _addHelpFlag();\n',
       '}\n',
     ];
   }
 
-  Future<List<Object>> _getInitializeParser(
-    ClassDeclaration clazz,
-    MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-  ) async {
+  List<Object> _getAddHelpFlag() {
     return [
       //
-      'void _initializeParser() {\n',
-      ...(await _getParserInitialization(clazz, builder, intr)).indent(),
+      'void _addHelpFlag() {\n',
+      '  parser.addFlag(\n',
+      '    "$_helpFlag",\n',
+      '    abbr: "$_hFlag",\n',
+      '    help: "Print this usage information.",\n',
+      '    negatable: false,\n',
+      '  );\n',
       '}\n',
     ];
   }
 
-  Future<List<Object>> _getParserInitialization(
-    ClassDeclaration clazz,
-    MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-  ) async {
-    final initializers = [
-      ...await Future.wait([
-        for (final fieldIntr in intr.fields.values)
-          _getParserInitializationForField(
-            clazz,
-            builder,
-            intr,
-            fieldIntr,
-          ),
-      ]),
-      _getParserInitializationForHelp(),
-    ];
-
-    return initializers
-        .alternateWith(['\n'])
-        .expand((e) => e)
-        .toList(growable: false);
-  }
-
-  Future<List<Object>> _getParserInitializationForField(
-    ClassDeclaration clazz,
-    MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-    FieldIntrospectionData fieldIntr,
-  ) async {
-    final field = fieldIntr.fieldDeclaration;
-    final name = field.identifier.name;
-
-    // TODO(alexeyinkin): Make @Arg() annotation for help when they're exposed.
-    builder.log('Annotation count on $name: ${field.metadata.length}');
-
-    final classDecl = fieldIntr.unaliasedTypeDeclaration;
-    final optionName = _camelToKebabCase(name);
-
-    if (classDecl.library.uri != Libraries.core) {
-      if (await fieldIntr.nonNullableStaticType
-          .isSubtypeOf(intr.staticTypes.Enum)) {
-        return _getParserInitializationForEnum(
-          builder,
-          fieldIntr: fieldIntr,
-          optionName: optionName,
-        );
-      }
-
-      builder.report(
-        Diagnostic(
-          DiagnosticMessage(
-            'An argument class can only have fields of core types, '
-            '${fieldIntr.unaliasedTypeDeclaration.identifier.name} given. ',
-            target: field.asDiagnosticTarget,
-          ),
-          Severity.error,
-        ),
-      );
-
-      return const [];
-    }
-
-    switch (classDecl.identifier.name) {
-      case 'String':
-      case 'int':
-      case 'double':
-        return _getParserInitializationForStringIntDouble(
-          field: field,
-          optionName: optionName,
-        );
-
-      case 'bool':
-        return _getParserInitializationForBool(
-          builder,
-          field: field,
-          optionName: optionName,
-        );
-    }
-
-    return ['// None for $name\n'];
-  }
-
-  List<Object> _getParserInitializationForStringIntDouble({
-    required FieldDeclaration field,
-    required String optionName,
-  }) {
-    return [
-      //
-      'parser.addOption(\n',
-      '  "$optionName",\n',
-      if (!field.hasInitializer && !field.type.isNullable)
-        '  mandatory: true,\n',
-      ');\n',
-    ];
-  }
-
-  List<Object> _getParserInitializationForBool(
-    MemberDeclarationBuilder builder, {
-    required FieldDeclaration field,
-    required String optionName,
-  }) {
-    if (field.type.isNullable) {
-      builder.report(
-        Diagnostic(
-          DiagnosticMessage(
-            'Boolean cannot be nullable.',
-            target: field.asDiagnosticTarget,
-          ),
-          Severity.error,
-        ),
-      );
-
-      return const [];
-    }
-
-    builder.report(
-      Diagnostic(
-        DiagnosticMessage(
-          'Boolean must have a default value.',
-          target: field.asDiagnosticTarget,
-        ),
-        Severity.error,
-      ),
-    );
-
-    return const [];
-  }
-
-  Future<List<Object>> _getParserInitializationForEnum(
-    MemberDeclarationBuilder builder, {
-    required FieldIntrospectionData fieldIntr,
-    required String optionName,
-  }) async {
-    final field = fieldIntr.fieldDeclaration;
-    final enumIntr =
-        await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration);
-    final values = enumIntr.values.map((v) => v.name).toList(growable: false);
-
-    return [
-      //
-      'parser.addOption(\n',
-      '  "$optionName",\n',
-      '  allowed: ${jsonEncode(values)},\n',
-      if (!field.hasInitializer && !field.type.isNullable)
-        '  mandatory: true,\n',
-      ');\n',
-    ];
-  }
-
-  List<Object> _getParserInitializationForHelp() {
-    return [
-      //
-      'parser.addFlag(\n',
-      '  "$_helpFlag",\n',
-      '  abbr: "$_hFlag",\n',
-      '  help: "Print this usage information.",\n',
-      '  negatable: false,\n',
-      ');\n',
-    ];
-  }
-
-  Future<List<Object>> _getParse(
-    ClassDeclaration clazz,
-    MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-  ) async {
-    final name = clazz.identifier.name;
-    final c = intr.codes;
-
-    return [
-      //
-      name, ' parse(', c.List, '<', c.String, '> argv) {\n',
-      '  try {\n',
-      '    final wrapped = _parseWrapped(argv);\n',
-      '    return $name(\n',
-      for (final fieldIntr in intr.fields.values)
-        ...[...await _getConstructionParam(builder, intr, fieldIntr), ',\n']
-            .indent(6),
-      '    );\n',
-      '  } on ', c.ArgumentError, ' catch (e) {\n',
-      '    ', c.stderr, '.writeln(e.message);', '\n',
-      '    ', c.stderr, '.writeln();', '\n',
-      '    _printUsage(', c.stderr, ');\n',
-      '    ', c.exit, '(64);\n',
-      '  } on ', c.FormatException, ' catch (e) {\n',
-      '    ', c.stderr, '.writeln(e.message);', '\n',
-      '    ', c.stderr, '.writeln();', '\n',
-      '    _printUsage(', c.stderr, ');\n',
-      '    ', c.exit, '(64);\n',
-      '  }\n',
-      '}\n',
-    ];
-  }
-
-  Future<List<Object>> _getConstructionParam(
-    MemberDeclarationBuilder builder,
-    _IntrospectionData intr,
-    FieldIntrospectionData fieldIntr,
-  ) async {
-    final field = fieldIntr.fieldDeclaration;
-    final type = fieldIntr.unaliasedTypeDeclaration.identifier.name;
-    final optionName = _camelToKebabCase(fieldIntr.name);
-
-    switch (type) {
-      case 'String':
-        return [
-          fieldIntr.name,
-          ': wrapped.option(${jsonEncode(optionName)})',
-          if (!field.type.isNullable) '!',
-        ];
-
-      case 'int':
-      case 'double':
-        final typeCode = switch (type) {
-          'int' => intr.codes.int,
-          'double' => intr.codes.double,
-          _ => throw Exception(),
-        };
-        return [
-          fieldIntr.name,
-          ': ',
-          if (field.type.isNullable)
-            'wrapped.option(${jsonEncode(optionName)}) == null ? null : ',
-          typeCode,
-          '.tryParse(wrapped.option(${jsonEncode(optionName)})!)',
-          ' ?? (throw ',
-          intr.codes.ArgumentError,
-          '.value(\n',
-          '  wrapped.option(${jsonEncode(optionName)}),\n',
-          '  "$optionName",\n',
-          '  "Cannot parse the value of \\"$optionName\\" into $type, \\"" + wrapped.option(${jsonEncode(optionName)})! + "\\" given.",\n',
-          ')',
-          ')',
-        ];
-
-      case 'bool':
-        return [
-          fieldIntr.name,
-          ': wrapped.flag(${jsonEncode(optionName)})',
-        ];
-    }
-
-    if (await fieldIntr.nonNullableStaticType
-        .isSubtypeOf(intr.staticTypes.Enum)) {
-      return [
-        fieldIntr.name,
-        ': ',
-        if (field.type.isNullable)
-          'wrapped.option(${jsonEncode(optionName)}) == null ? null : ',
-        fieldIntr.unaliasedTypeDeclaration.identifier,
-        '.values.byName(wrapped.option(${jsonEncode(optionName)})!)',
-      ];
-    }
-
-    throw Exception('Parsing of $type into an argument value is unimplemented');
-  }
-
-  List<Object> _getParseWrapped(_IntrospectionData intr) {
+  List<Object> _getParseWrapped(IntrospectionData intr) {
     final c = intr.codes;
 
     return [
@@ -433,7 +171,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     ];
   }
 
-  List<Object> _getPrintUsage(_IntrospectionData intr) {
+  List<Object> _getPrintUsage(IntrospectionData intr) {
     return [
       //
       'void _printUsage(', intr.codes.IOSink, ' stream) {\n',
@@ -461,37 +199,6 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   }
 }
 
-class _IntrospectionData {
-  _IntrospectionData({
-    required this.codes,
-    required this.fields,
-    required this.staticTypes,
-  });
-
-  final Codes codes;
-  final Map<String, FieldIntrospectionData> fields;
-  final StaticTypes staticTypes;
-
-  static Future<_IntrospectionData> fill(
-    ClassDeclaration clazz,
-    MemberDeclarationBuilder builder,
-  ) async {
-    final ids = await ResolvedIdentifiers.fill(builder);
-    final codes = Codes.fromResolvedIdentifiers(ids);
-
-    final (fields, staticTypes) = await (
-      builder.introspectType(clazz),
-      StaticTypes.fill(builder, codes),
-    ).wait;
-
-    return _IntrospectionData(
-      codes: codes,
-      fields: fields,
-      staticTypes: staticTypes,
-    );
-  }
-}
-
 String _camelToKebabCase(String input) {
   final buffer = StringBuffer();
 
@@ -512,11 +219,103 @@ String _camelToKebabCase(String input) {
   return buffer.toString();
 }
 
-extension _IterableExtension<T> on Iterable<T> {
-  Iterable<T> alternateWith(T separator) {
-    return expand((item) sync* {
-      yield separator;
-      yield item;
-    }).skip(1);
+Future<IntrospectionData> _introspect(
+  ClassDeclaration clazz,
+  MemberDeclarationBuilder builder,
+) async {
+  final ids = await ResolvedIdentifiers.fill(builder);
+  final codes = Codes.fromResolvedIdentifiers(ids);
+
+  final (fields, staticTypes) = await (
+    builder.introspectType(clazz),
+    StaticTypes.fill(builder, codes),
+  ).wait;
+
+  final arguments = await _fieldsToArguments(
+    fields,
+    builder: builder,
+    staticTypes: staticTypes,
+  );
+
+  return IntrospectionData(
+    codes: codes,
+    arguments: arguments,
+    staticTypes: staticTypes,
+  );
+}
+
+Future<Arguments> _fieldsToArguments(
+  Map<String, FieldIntrospectionData> fields, {
+  required DeclarationBuilder builder,
+  required StaticTypes staticTypes,
+}) async {
+  final futures = <String, Future<Argument?>>{};
+
+  for (final entry in fields.entries) {
+    futures[entry.key] = _fieldToArgument(
+      entry.value,
+      builder: builder,
+      staticTypes: staticTypes,
+    );
   }
+
+  final arguments = (await waitMap(futures)).whereNotNull();
+  return Arguments(
+    arguments: arguments,
+  );
+}
+
+Future<Argument?> _fieldToArgument(
+  FieldIntrospectionData fieldIntr, {
+  required DeclarationBuilder builder,
+  required StaticTypes staticTypes,
+}) async {
+  final classDecl = fieldIntr.unaliasedTypeDeclaration;
+  final optionName = _camelToKebabCase(fieldIntr.name);
+
+  if (classDecl.library.uri != Libraries.core) {
+    if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
+      return EnumArgument(
+        intr: fieldIntr,
+        optionName: optionName,
+        enumIntr:
+            await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
+      );
+    }
+
+    builder.report(
+      Diagnostic(
+        DiagnosticMessage(
+          'An argument class can only have fields of core types, '
+          '${fieldIntr.unaliasedTypeDeclaration.identifier.name} given. ',
+          target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
+        ),
+        Severity.error,
+      ),
+    );
+
+    return null;
+  }
+
+  switch (classDecl.identifier.name) {
+    case 'double':
+      return DoubleArgument(
+        intr: fieldIntr,
+        optionName: optionName,
+      );
+
+    case 'int':
+      return IntArgument(
+        intr: fieldIntr,
+        optionName: optionName,
+      );
+
+    case 'String':
+      return StringArgument(
+        intr: fieldIntr,
+        optionName: optionName,
+      );
+  }
+
+  return null;
 }

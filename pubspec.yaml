@@ -13,7 +13,7 @@ topics:
 dependencies:
   args: ^2.5.0
   collection: ^1.18.0
-  common_macros: ^0.1.0-1.dev
+  common_macros: ^0.1.0-2.dev
   macro_util: ^0.1.0-4.dev
   macros: ^0.1.2-main.0
 
@@ -24,4 +24,5 @@ dev_dependencies:
   total_lints: ^3.4.0
 
 #dependency_overrides:
+#  common_macros: { path: ../dart-common-macros }
 #  show_augmentation: { path: ../dart-show-augmentation }
