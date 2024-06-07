@@ -10,22 +10,22 @@ import 'package:args_macro/args_macro.dart';
 class MyArgs {
   final String requiredString;
   final String? optionalString;
+  String stringWithDefault = 'My default string.';
 
   final int requiredInt;
   final int? optionalInt;
+  int intWithDefault = 7;
 
   final double requiredDouble;
   final double? optionalDouble;
+  double doubleWithDefault = 7.77;
 
   final Fruit requiredEnum;
   final Fruit? optionalEnum;
+  Fruit enumWithDefault = Fruit.mango;
 }
 
-enum Fruit {
-  apple,
-  banana,
-  orange,
-}
+enum Fruit { apple, banana, mango, orange }
 
 void main(List<String> argv) {
   final parser = MyArgsParser(); // Generated class.
@@ -44,7 +44,9 @@ Supported types:
 - `double`
 - `enum`
 
-Non-nullable fields create mandatory options. Nullable fields create optional options.
+- A non-nullable field without an initializer creates a mandatory option.
+- A nullable field without an initializer creates an optional option that defaults to `null`.
+- A field with an initializer creates an optional option with the default value of that initializer. Such a field must not be final or nullable.
 
 ## Help
 
@@ -54,12 +56,16 @@ It prints the usage and terminates the program (`parse()` method never returns).
 ```
     --required-string (mandatory)
     --optional-string
+    --string-with-default            (defaults to "My default string.")
     --required-int (mandatory)
     --optional-int
+    --int-with-default               (defaults to "7")
     --required-double (mandatory)
     --optional-double
-    --required-enum (mandatory)      [apple, banana, orange]
-    --optional-enum                  [apple, banana, orange]
+    --double-with-default            (defaults to "7.77")
+    --required-enum (mandatory)      [apple, banana, mango, orange]
+    --optional-enum                  [apple, banana, mango, orange]
+    --enum-with-default              [apple, banana, mango (default), orange]
 -h, --help                           Print this usage information.
 ```
 

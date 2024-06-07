@@ -4,6 +4,7 @@ import 'package:macro_util/macro_util.dart';
 
 import '../argument.dart';
 import '../introspection_data.dart';
+import 'mock_data_object_generator.dart';
 import 'visitor.dart';
 
 class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
@@ -68,7 +69,14 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       'parser.addOption(\n',
       '  "${argument.optionName}",\n',
       '  allowed: ${jsonEncode(values)},\n',
-      if (!field.hasInitializer && !field.type.isNullable)
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '?.name',
+        ',\n',
+      ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
       ');\n',
     ];
@@ -87,7 +95,14 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       //
       'parser.addOption(\n',
       '  "${argument.optionName}",\n',
-      if (!field.hasInitializer && !field.type.isNullable)
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '?.toString()',
+        ',\n',
+      ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
       ');\n',
     ];

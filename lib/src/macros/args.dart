@@ -15,6 +15,7 @@ import '../resolved_identifiers.dart';
 import '../static_types.dart';
 import '../util.dart';
 import '../visitors/add_options_generator.dart';
+import '../visitors/mock_data_object_generator.dart';
 import '../visitors/parse_generator.dart';
 import '../visitors/to_debug_string_generator.dart';
 
@@ -69,11 +70,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     await Future.wait([
       //
       const Constructor().buildDeclarationsForClass(clazz, builder),
-
-      const Constructor(
-        name: 'withDefaults',
-        skipInitialized: true,
-      ).buildDeclarationsForClass(clazz, builder),
+      MockDataObjectGenerator.createMockConstructor(clazz, builder),
     ]);
   }
 
@@ -100,6 +97,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.codes.ArgParser, '();\n',
+        ...MockDataObjectGenerator(clazz, intr).generate().indent(),
         ..._getConstructor(clazz).indent(),
         ...AddOptionsGenerator(intr).generate().indent(),
         ..._getAddHelpFlag().indent(),
