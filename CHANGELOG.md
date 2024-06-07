@@ -1,3 +1,7 @@
+## 0.1.0-4.dev
+
+* Support nullable fields, making optional options from them.
+
 ## 0.1.0-3.dev
 
 * Support enums.

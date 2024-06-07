@@ -177,8 +177,13 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     FieldIntrospectionData fieldIntr,
   ) async {
     final field = fieldIntr.fieldDeclaration;
+    final name = field.identifier.name;
+
+    // TODO(alexeyinkin): Make @Arg() annotation for help when they're exposed.
+    builder.log('Annotation count on $name: ${field.metadata.length}');
+
     final classDecl = fieldIntr.unaliasedTypeDeclaration;
-    final optionName = _camelToKebabCase(field.identifier.name);
+    final optionName = _camelToKebabCase(name);
 
     if (classDecl.library.uri != Libraries.core) {
       if (await fieldIntr.nonNullableStaticType
@@ -208,7 +213,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       case 'String':
       case 'int':
       case 'double':
-        return _getParserInitializationForString(
+        return _getParserInitializationForStringIntDouble(
           field: field,
           optionName: optionName,
         );
@@ -221,10 +226,10 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         );
     }
 
-    return ['// None for ${field.identifier.name}\n'];
+    return ['// None for $name\n'];
   }
 
-  List<Object> _getParserInitializationForString({
+  List<Object> _getParserInitializationForStringIntDouble({
     required FieldDeclaration field,
     required String optionName,
   }) {
@@ -341,6 +346,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     _IntrospectionData intr,
     FieldIntrospectionData fieldIntr,
   ) async {
+    final field = fieldIntr.fieldDeclaration;
     final type = fieldIntr.unaliasedTypeDeclaration.identifier.name;
     final optionName = _camelToKebabCase(fieldIntr.name);
 
@@ -348,7 +354,8 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       case 'String':
         return [
           fieldIntr.name,
-          ': wrapped.option(${jsonEncode(optionName)})!',
+          ': wrapped.option(${jsonEncode(optionName)})',
+          if (!field.type.isNullable) '!',
         ];
 
       case 'int':
@@ -361,6 +368,8 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         return [
           fieldIntr.name,
           ': ',
+          if (field.type.isNullable)
+            'wrapped.option(${jsonEncode(optionName)}) == null ? null : ',
           typeCode,
           '.tryParse(wrapped.option(${jsonEncode(optionName)})!)',
           ' ?? (throw ',
@@ -385,6 +394,8 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       return [
         fieldIntr.name,
         ': ',
+        if (field.type.isNullable)
+          'wrapped.option(${jsonEncode(optionName)}) == null ? null : ',
         fieldIntr.unaliasedTypeDeclaration.identifier,
         '.values.byName(wrapped.option(${jsonEncode(optionName)})!)',
       ];

@@ -10,18 +10,35 @@ The command description.
 
 Usage: executable_name [arguments]
     --required-string (mandatory)   ⎵
+    --optional-string               ⎵
     --required-int (mandatory)      ⎵
+    --optional-int                  ⎵
     --required-double (mandatory)   ⎵
+    --optional-double               ⎵
     --required-enum (mandatory)      [apple, banana, orange]
+    --optional-enum                  [apple, banana, orange]
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
 
+const _requiredString = 'required-string';
+const _optionalString = 'optional-string';
+const _requiredInt = 'required-int';
+const _optionalInt = 'optional-int';
+const _requiredDouble = 'required-double';
+const _optionalDouble = 'optional-double';
+const _requiredEnum = 'required-enum';
+const _optionalEnum = 'optional-enum';
+
 const _arguments = {
-  'required-string': '--required-string=abc',
-  'required-int': '--required-int=123',
-  'required-double': '--required-double=3.1415926535',
-  'required-enum': '--required-enum=apple',
+  _requiredString: '--$_requiredString=abc',
+  _optionalString: '--$_optionalString=def',
+  _requiredInt: '--$_requiredInt=123',
+  _optionalInt: '--$_optionalInt=456',
+  _requiredDouble: '--$_requiredDouble=3.1415926535',
+  _optionalDouble: '--$_optionalDouble=2.718281828',
+  _requiredEnum: '--$_requiredEnum=apple',
+  _optionalEnum: '--$_optionalEnum=banana',
 };
 
 const _usageExitCode = 64;
@@ -41,9 +58,13 @@ void main() {
 
     expect(result.stdout, '''
 requiredString: abc (String)
+optionalString: def (String)
 requiredInt: 123 (int)
+optionalInt: 456 (int)
 requiredDouble: 3.1415926535 (double)
+optionalDouble: 2.718281828 (double)
 requiredEnum: Fruit.apple (Fruit)
+optionalEnum: Fruit.banana (Fruit)
 ''');
   });
 
@@ -62,11 +83,9 @@ requiredEnum: Fruit.apple (Fruit)
   });
 
   group('String', () {
-    const option = 'required-string';
-
     test('missing required', () async {
       final arguments = {..._arguments};
-      arguments.remove(option);
+      arguments.remove(_requiredString);
 
       final result = await dartRun(
         [_executable, ...arguments.values],
@@ -75,16 +94,30 @@ requiredEnum: Fruit.apple (Fruit)
         expectedExitCode: _usageExitCode,
       );
 
-      expect(result.stderr, 'Option "$option" is mandatory.\n\n$_helpOutput');
+      expect(
+        result.stderr,
+        'Option "$_requiredString" is mandatory.\n\n$_helpOutput',
+      );
+    });
+
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalString);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalString: null (String)'));
     });
   });
 
   group('int', () {
-    const option = 'required-int';
-
     test('missing required', () async {
       final arguments = {..._arguments};
-      arguments.remove(option);
+      arguments.remove(_requiredInt);
 
       final result = await dartRun(
         [_executable, ...arguments.values],
@@ -93,37 +126,54 @@ requiredEnum: Fruit.apple (Fruit)
         expectedExitCode: _usageExitCode,
       );
 
-      expect(result.stderr, 'Option "$option" is mandatory.\n\n$_helpOutput');
+      expect(
+        result.stderr,
+        'Option "$_requiredInt" is mandatory.\n\n$_helpOutput',
+      );
     });
 
-    test('parse error', () async {
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalInt);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalInt: null (int)'));
+    });
+
+    test('parse error for required and optional', () async {
+      const options = [_requiredInt, _optionalInt];
       const values = ['', 'abc', '3.1415926535'];
 
-      for (final value in values) {
-        final arguments = {..._arguments, option: '--$option=$value'};
+      for (final option in options) {
+        for (final value in values) {
+          final arguments = {..._arguments, option: '--$option=$value'};
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-          expectedExitCode: _usageExitCode,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+            expectedExitCode: _usageExitCode,
+          );
 
-        expect(
-          result.stderr,
-          'Cannot parse the value of "$option" into int, '
-          '"$value" given.\n\n$_helpOutput',
-        );
+          expect(
+            result.stderr,
+            'Cannot parse the value of "$option" into int, '
+            '"$value" given.\n\n$_helpOutput',
+          );
+        }
       }
     });
   });
 
   group('double', () {
-    const option = 'required-double';
-
     test('missing required', () async {
       final arguments = {..._arguments};
-      arguments.remove(option);
+      arguments.remove(_requiredDouble);
 
       final result = await dartRun(
         [_executable, ...arguments.values],
@@ -132,27 +182,46 @@ requiredEnum: Fruit.apple (Fruit)
         expectedExitCode: _usageExitCode,
       );
 
-      expect(result.stderr, 'Option "$option" is mandatory.\n\n$_helpOutput');
+      expect(
+        result.stderr,
+        'Option "$_requiredDouble" is mandatory.\n\n$_helpOutput',
+      );
     });
 
-    test('parse error', () async {
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalDouble);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalDouble: null (double)'));
+    });
+
+    test('parse error for required and optional', () async {
+      const options = [_requiredDouble, _optionalDouble];
       const values = ['', 'abc'];
 
-      for (final value in values) {
-        final arguments = {..._arguments, option: '--$option=$value'};
+      for (final option in options) {
+        for (final value in values) {
+          final arguments = {..._arguments, option: '--$option=$value'};
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-          expectedExitCode: _usageExitCode,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+            expectedExitCode: _usageExitCode,
+          );
 
-        expect(
-          result.stderr,
-          'Cannot parse the value of "$option" into double, '
-          '"$value" given.\n\n$_helpOutput',
-        );
+          expect(
+            result.stderr,
+            'Cannot parse the value of "$option" into double, '
+            '"$value" given.\n\n$_helpOutput',
+          );
+        }
       }
     });
   });
@@ -182,11 +251,9 @@ requiredEnum: Fruit.apple (Fruit)
   });
 
   group('enum', () {
-    const option = 'required-enum';
-
     test('missing required', () async {
       final arguments = {..._arguments};
-      arguments.remove(option);
+      arguments.remove(_requiredEnum);
 
       final result = await dartRun(
         [_executable, ...arguments.values],
@@ -195,27 +262,46 @@ requiredEnum: Fruit.apple (Fruit)
         expectedExitCode: _usageExitCode,
       );
 
-      expect(result.stderr, 'Option "$option" is mandatory.\n\n$_helpOutput');
+      expect(
+        result.stderr,
+        'Option "$_requiredEnum" is mandatory.\n\n$_helpOutput',
+      );
     });
 
-    test('parse error', () async {
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalEnum);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalEnum: null (Fruit)'));
+    });
+
+    test('parse error for required and optional', () async {
+      const options = [_requiredEnum, _optionalEnum];
       const values = ['', 'abc'];
 
-      for (final value in values) {
-        final arguments = {..._arguments, option: '--$option=$value'};
+      for (final option in options) {
+        for (final value in values) {
+          final arguments = {..._arguments, option: '--$option=$value'};
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-          expectedExitCode: _usageExitCode,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+            expectedExitCode: _usageExitCode,
+          );
 
-        expect(
-          result.stderr,
-          '"$value" is not an allowed value for option "$option".'
-          '\n\n$_helpOutput',
-        );
+          expect(
+            result.stderr,
+            '"$value" is not an allowed value for option "$option".'
+            '\n\n$_helpOutput',
+          );
+        }
       }
     });
   });
