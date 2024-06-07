@@ -197,8 +197,8 @@ enumWithDefault: Fruit.orange (Fruit)
       expect(result.stdout, contains('intWithDefault: 7 (int)'));
     });
 
-    test('parse error for required and optional', () async {
-      const options = [_requiredInt, _optionalInt];
+    test('parse error for required, optional, and with default', () async {
+      const options = [_requiredInt, _optionalInt, _intWithDefault];
       const values = ['', 'abc', '3.1415926535'];
 
       for (final option in options) {
@@ -266,8 +266,8 @@ enumWithDefault: Fruit.orange (Fruit)
       expect(result.stdout, contains('doubleWithDefault: 7.77 (double)'));
     });
 
-    test('parse error for required and optional', () async {
-      const options = [_requiredDouble, _optionalDouble];
+    test('parse error for required, optional, and with default', () async {
+      const options = [_requiredDouble, _optionalDouble, _doubleWithDefault];
       const values = ['', 'abc'];
 
       for (final option in options) {
@@ -359,8 +359,8 @@ enumWithDefault: Fruit.orange (Fruit)
       expect(result.stdout, contains('enumWithDefault: Fruit.mango (Fruit)'));
     });
 
-    test('parse error for required and optional', () async {
-      const options = [_requiredEnum, _optionalEnum];
+    test('parse error for required, optional, and with default', () async {
+      const options = [_requiredEnum, _optionalEnum, _enumWithDefault];
       const values = ['', 'abc'];
 
       for (final option in options) {
