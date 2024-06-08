@@ -268,13 +268,51 @@ Future<Argument?> _fieldToArgument(
   required DeclarationBuilder builder,
   required StaticTypes staticTypes,
 }) async {
+  final field = fieldIntr.fieldDeclaration;
+  final type = field.type;
   final classDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
+
+  bool isValid = true;
+
+  if (field.hasInitializer && field.hasFinal) {
+    builder.report(
+      Diagnostic(
+        DiagnosticMessage(
+          'A field with an initializer cannot be final '
+          'because it needs to be overwritten when parsing the argument.',
+          target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
+        ),
+        Severity.error,
+      ),
+    );
+
+    isValid = false;
+  }
+
+  if (classDecl.identifier.name != 'bool') {
+    if (field.hasInitializer && type.isNullable) {
+      builder.report(
+        Diagnostic(
+          DiagnosticMessage(
+            'A field with an initializer must be non-nullable '
+            'because nullability and the default value '
+            'are mutually exclusive ways to handle a missing value.',
+            target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
+          ),
+          Severity.error,
+        ),
+      );
+
+      isValid = false;
+    }
+  }
 
   if (classDecl.library.uri != Libraries.core) {
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
         intr: fieldIntr,
+        isValid: isValid,
         optionName: optionName,
         enumIntr:
             await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
@@ -296,21 +334,59 @@ Future<Argument?> _fieldToArgument(
   }
 
   switch (classDecl.identifier.name) {
+    case 'bool':
+      if (type.isNullable) {
+        builder.report(
+          Diagnostic(
+            DiagnosticMessage(
+              'Boolean cannot be nullable.',
+              target: field.asDiagnosticTarget,
+            ),
+            Severity.error,
+          ),
+        );
+
+        isValid = false;
+      }
+
+      if (!field.hasInitializer) {
+        builder.report(
+          Diagnostic(
+            DiagnosticMessage(
+              'Boolean must have a default value.',
+              target: field.asDiagnosticTarget,
+            ),
+            Severity.error,
+          ),
+        );
+
+        isValid = false;
+      }
+
+      return BoolArgument(
+        intr: fieldIntr,
+        isValid: isValid,
+        optionName: optionName,
+      );
+
     case 'double':
       return DoubleArgument(
         intr: fieldIntr,
+        isValid: isValid,
         optionName: optionName,
       );
 
     case 'int':
       return IntArgument(
         intr: fieldIntr,
+        isValid: isValid,
         optionName: optionName,
       );
 
     case 'String':
       return StringArgument(
         intr: fieldIntr,
+        isValid: isValid,
         optionName: optionName,
       );
   }

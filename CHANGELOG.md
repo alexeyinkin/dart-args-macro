@@ -1,3 +1,8 @@
+## 0.1.0-6.dev
+
+* Support boolean flags.
+* Reduced the minimal SDK version to 3.5.0-164.
+
 ## 0.1.0-5.dev
 
 * Support default values.

@@ -4,11 +4,19 @@ import 'package:macro_util/macro_util.dart';
 
 import '../introspection_data.dart';
 
+/// Generates 'toDebugString()' function on the data class
+/// to dump data for use in the tests of this package.
+///
+/// Do not use this function. It will be replaced with JsonCodable
+/// when it supports enums.
 class ToDebugStringGenerator {
+  // ignore: public_member_api_docs
   ToDebugStringGenerator(this.intr);
 
+  // ignore: public_member_api_docs
   final IntrospectionData intr;
 
+  // ignore: public_member_api_docs
   List<Object> generate() {
     final c = intr.codes;
 

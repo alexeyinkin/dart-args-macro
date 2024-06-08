@@ -8,14 +8,31 @@ import 'visitor.dart';
 
 const _constructorName = 'withDefaults';
 
+/// Generates code to create an instance of the data class that
+/// does not overwrite the fields that have initializers.
+///
+/// This mock object is then used as the source of data
+/// for options that were not passed.
+///
+/// The required fields are filled with dummy values of the respective types
+/// since they will never be used because the actual values for them
+/// will be parsed when constructing the end-instance of the data class.
 class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
+  // ignore: public_member_api_docs
   MockDataObjectGenerator(this.clazz, this.intr);
 
+  // ignore: public_member_api_docs
   final ClassDeclaration clazz;
+
+  // ignore: public_member_api_docs
   final IntrospectionData intr;
 
+  // ignore: public_member_api_docs
   static const fieldName = '_mockDataObject';
 
+  /// Creates the constructor on the data class which does not have
+  /// parameters for fields that have initializers
+  /// thus keeping them from being overwritten.
   static Future<void> createMockConstructor(
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
@@ -26,6 +43,7 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
     ).buildDeclarationsForClass(clazz, builder);
   }
 
+  // ignore: public_member_api_docs
   List<Object> generate() {
     final name = clazz.identifier.name;
     final arguments = intr.arguments.arguments.values
@@ -36,6 +54,17 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
       for (final parts in arguments.map((argument) => argument.accept(this)))
         ...[...parts, ',\n'].indent(),
       ');\n',
+    ];
+  }
+
+  @override
+  List<Object> visitBool(BoolArgument argument) {
+    // Bool fields must have initializers, so they never should be
+    // in a mock object. However, if a user violates that, we want
+    // our diagnostic and not a compile error, so return valid code.
+    return [
+      argument.intr.name,
+      ': false',
     ];
   }
 

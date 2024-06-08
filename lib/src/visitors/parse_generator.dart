@@ -5,17 +5,27 @@ import 'package:macros/macros.dart';
 
 import '../argument.dart';
 import '../introspection_data.dart';
+import 'mock_data_object_generator.dart';
 import 'visitor.dart';
 
+/// Generates the code that parses option values into the data class instance.
 class ParseGenerator extends ArgumentVisitor<List<Object>> {
+  // ignore: public_member_api_docs
   ParseGenerator(this.clazz, this.intr);
 
+  // ignore: public_member_api_docs
   final ClassDeclaration clazz;
+
+  // ignore: public_member_api_docs
   final IntrospectionData intr;
 
+  // ignore: public_member_api_docs
   List<Object> generate() {
     final name = clazz.identifier.name;
     final c = intr.codes;
+
+    final arguments =
+        intr.arguments.arguments.values.where((a) => a.isInConstructor);
 
     return [
       //
@@ -23,7 +33,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       '  try {\n',
       '    final wrapped = _parseWrapped(argv);\n',
       '    return $name(\n',
-      for (final argument in intr.arguments.arguments.values)
+      for (final argument in arguments)
         ...[...argument.accept(this), ',\n'].indent(6),
       '    );\n',
       '  } on ', c.ArgumentError, ' catch (e) {\n',
@@ -41,12 +51,26 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     ];
   }
 
-  // bool:
-  //     return [
-  //     fieldIntr.name,
-  //     ': wrapped.flag(${jsonEncode(optionName)})',
-  //     ',\n',
-  //     ];
+  @override
+  List<Object> visitBool(BoolArgument argument) {
+    final def = '${MockDataObjectGenerator.fieldName}.${argument.intr.name}';
+
+    if (!argument.isValid) {
+      // Can be nullable and break the '?:' operator.
+      return [
+        argument.intr.name,
+        ': false',
+      ];
+    }
+
+    return [
+      argument.intr.name,
+      ': ',
+      'wrapped.wasParsed(${argument.flagNameGetter})',
+      ' ? !$def',
+      ' : $def',
+    ];
+  }
 
   @override
   List<Object> visitDouble(DoubleArgument argument) =>

@@ -8,7 +8,7 @@ dependencies:
   args_macro: { path: .. }
 
 dev_dependencies:
-  show_augmentation: ^0.1.0-3.dev
+  show_augmentation: ^0.1.0-7.dev
   total_lints: ^3.4.0
 
 #dependency_overrides:

@@ -17,6 +17,9 @@ class MyArgs {
   final double? optionalDouble;
   double doubleWithDefault = 7.77;
 
+  bool boolWithDefaultFalse = false;
+  bool boolWithDefaultTrue = true;
+
   final Fruit requiredEnum;
   final Fruit? optionalEnum;
   Fruit enumWithDefault = Fruit.mango;

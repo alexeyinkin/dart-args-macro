@@ -7,56 +7,42 @@ import '../introspection_data.dart';
 import 'mock_data_object_generator.dart';
 import 'visitor.dart';
 
+/// Generates '_addOptions' function of the parser
+/// which adds all options to it.
 class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
+  // ignore: public_member_api_docs
   AddOptionsGenerator(this.intr);
 
+  // ignore: public_member_api_docs
   final IntrospectionData intr;
 
+  // ignore: public_member_api_docs
   List<Object> generate() {
+    final arguments = intr.arguments.arguments.values.where((a) => a.isValid);
+
     return [
       //
       'void _addOptions() {\n',
-      for (final argument in intr.arguments.arguments.values)
+      for (final argument in arguments)
         ...[...argument.accept(this), '\n'].indent(),
       '}\n',
     ];
   }
 
-  // bool:
-  // List<Object> _getParserInitializationForBool(
-  //     MemberDeclarationBuilder builder, {
-  //       required FieldDeclaration field,
-  //       required String optionName,
-  //     }) {
-  //   if (field.type.isNullable) {
-  //     builder.report(
-  //       Diagnostic(
-  //         DiagnosticMessage(
-  //           'Boolean cannot be nullable.',
-  //           target: field.asDiagnosticTarget,
-  //         ),
-  //         Severity.error,
-  //       ),
-  //     );
-  //
-  //     return const [];
-  //   }
-  //
-  //   builder.report(
-  //     Diagnostic(
-  //       DiagnosticMessage(
-  //         'Boolean must have a default value.',
-  //         target: field.asDiagnosticTarget,
-  //       ),
-  //       Severity.error,
-  //     ),
-  //   );
-  //
-  //   return const [];
-  // }
+  @override
+  List<Object> visitBool(BoolArgument argument) {
+    return [
+      //
+      'parser.addFlag(\n',
+      '  ${argument.flagNameGetter},\n',
+      '  negatable: false,\n',
+      ');\n',
+    ];
+  }
 
   @override
-  List<Object> visitDouble(DoubleArgument arg) => _visitStringIntDouble(arg);
+  List<Object> visitDouble(DoubleArgument argument) =>
+      _visitStringIntDouble(argument);
 
   @override
   List<Object> visitEnum(EnumArgument argument) {
@@ -83,10 +69,12 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
-  List<Object> visitInt(IntArgument arg) => _visitStringIntDouble(arg);
+  List<Object> visitInt(IntArgument argument) =>
+      _visitStringIntDouble(argument);
 
   @override
-  List<Object> visitString(StringArgument arg) => _visitStringIntDouble(arg);
+  List<Object> visitString(StringArgument argument) =>
+      _visitStringIntDouble(argument);
 
   List<Object> _visitStringIntDouble(Argument argument) {
     final field = argument.intr.fieldDeclaration;

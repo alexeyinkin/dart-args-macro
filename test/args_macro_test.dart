@@ -1,3 +1,4 @@
+import 'package:matching/matching.dart';
 import 'package:test/test.dart';
 import 'package:test_util/test_util.dart';
 
@@ -18,6 +19,8 @@ Usage: executable_name [arguments]
     --required-double (mandatory)   ⎵
     --optional-double               ⎵
     --double-with-default            (defaults to "7.77")
+    --bool-with-default-false       ⎵
+    --no-bool-with-default-true     ⎵
     --required-enum (mandatory)      [apple, banana, mango, orange]
     --optional-enum                  [apple, banana, mango, orange]
     --enum-with-default              [apple, banana, mango (default), orange]
@@ -37,6 +40,9 @@ const _requiredDouble = 'required-double';
 const _optionalDouble = 'optional-double';
 const _doubleWithDefault = 'double-with-default';
 
+const _boolWithDefaultFalse = 'bool-with-default-false';
+const _noBoolWithDefaultTrue = 'no-bool-with-default-true';
+
 const _requiredEnum = 'required-enum';
 const _optionalEnum = 'optional-enum';
 const _enumWithDefault = 'enum-with-default';
@@ -54,6 +60,9 @@ const _arguments = {
   _requiredDouble: '--$_requiredDouble=3.1415926535',
   _optionalDouble: '--$_optionalDouble=2.718281828',
   _doubleWithDefault: '--$_doubleWithDefault=1.61803398875',
+
+  _boolWithDefaultFalse: '--bool-with-default-false',
+  _noBoolWithDefaultTrue: '--no-bool-with-default-true',
 
   _requiredEnum: '--$_requiredEnum=apple',
   _optionalEnum: '--$_optionalEnum=banana',
@@ -85,6 +94,8 @@ intWithDefault: 789 (int)
 requiredDouble: 3.1415926535 (double)
 optionalDouble: 2.718281828 (double)
 doubleWithDefault: 1.61803398875 (double)
+boolWithDefaultFalse: true (bool)
+boolWithDefaultTrue: false (bool)
 requiredEnum: Fruit.apple (Fruit)
 optionalEnum: Fruit.banana (Fruit)
 enumWithDefault: Fruit.orange (Fruit)
@@ -291,29 +302,79 @@ enumWithDefault: Fruit.orange (Fruit)
     });
   });
 
-  // group('bool', () {
-  //   test('cannot be nullable', () async {
-  //     final result = await dartRun(
-  //       ['lib/error_bool_nullable.dart'],
-  //       experiments: _experiments,
-  //       workingDirectory: _workingDirectory,
-  //       expectedExitCode: _compileErrorExitCode,
-  //     );
-  //
-  //     expect(result.stderr, contains('Boolean cannot be nullable.'));
-  //   });
-  //
-  //   test('cannot be non-nullable required without default', () async {
-  //     final result = await dartRun(
-  //       ['lib/error_bool_nonnullable_required_without_default.dart'],
-  //       experiments: _experiments,
-  //       workingDirectory: _workingDirectory,
-  //       expectedExitCode: _compileErrorExitCode,
-  //     );
-  //
-  //     expect(result.stderr, contains('Boolean must have a default value.'));
-  //   });
-  // });
+  group('bool', () {
+    test('skip -> default', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_boolWithDefaultFalse);
+      arguments.remove(_noBoolWithDefaultTrue);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('boolWithDefaultFalse: false (bool)'));
+      expect(result.stdout, contains('boolWithDefaultTrue: true (bool)'));
+    });
+
+    test('cannot be nullable', () async {
+      final result = await dartRun(
+        ['lib/error_bool_nullable.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes('Boolean cannot be nullable.', 1),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes('Boolean must have a default value.', 1),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 2));
+    });
+
+    test('cannot be nullable with default', () async {
+      final result = await dartRun(
+        ['lib/error_bool_nullable_default.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes('Boolean cannot be nullable.', 1),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A field with an initializer cannot be final '
+          'because it needs to be overwritten when parsing the argument.',
+          1,
+        ),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 2));
+    });
+
+    test('cannot be non-nullable required without default', () async {
+      final result = await dartRun(
+        ['lib/error_bool_nonnullable_required_without_default.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes('Boolean must have a default value.', 1),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 1));
+    });
+  });
 
   group('enum', () {
     test('missing required', () async {
@@ -381,6 +442,51 @@ enumWithDefault: Fruit.orange (Fruit)
           );
         }
       }
+    });
+  });
+
+  group('Common errors.', () {
+    test('Final with default', () async {
+      final result = await dartRun(
+        ['lib/error_final_with_default.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A field with an initializer cannot be final '
+          'because it needs to be overwritten when parsing the argument.',
+          5,
+        ),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 5));
+    });
+
+    test('Nullable with default', () async {
+      final result = await dartRun(
+        ['lib/error_nullable_with_default.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A field with an initializer must be non-nullable '
+          'because nullability and the default value '
+          'are mutually exclusive ways to handle a missing value.',
+          4,
+        ),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes('Boolean cannot be nullable.', 1),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 5));
     });
   });
 }
