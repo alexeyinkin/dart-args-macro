@@ -73,6 +73,25 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       _visitStringIntDouble(argument);
 
   @override
+  List<Object> visitListString(ListStringArgument argument) {
+    final field = argument.intr.fieldDeclaration;
+
+    return [
+      //
+      'parser.addMultiOption(\n',
+      '  "${argument.optionName}",\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        ',\n',
+      ],
+      ');\n',
+    ];
+  }
+
+  @override
   List<Object> visitString(StringArgument argument) =>
       _visitStringIntDouble(argument);
 

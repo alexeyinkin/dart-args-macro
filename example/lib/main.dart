@@ -23,6 +23,9 @@ class MyArgs {
   final Fruit requiredEnum;
   final Fruit? optionalEnum;
   Fruit enumWithDefault = Fruit.mango;
+
+  final List<String> stringList;
+  List<String> stringListWithDefault = ['Huey', 'Dewey', 'Louie'];
 }
 
 enum Fruit { apple, banana, mango, orange }

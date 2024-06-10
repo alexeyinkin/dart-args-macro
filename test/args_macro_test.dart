@@ -24,6 +24,8 @@ Usage: executable_name [arguments]
     --required-enum (mandatory)      [apple, banana, mango, orange]
     --optional-enum                  [apple, banana, mango, orange]
     --enum-with-default              [apple, banana, mango (default), orange]
+    --string-list                   ⎵
+    --string-list-with-default       (defaults to "Huey", "Dewey", "Louie")
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
@@ -47,6 +49,9 @@ const _requiredEnum = 'required-enum';
 const _optionalEnum = 'optional-enum';
 const _enumWithDefault = 'enum-with-default';
 
+const _stringList = 'string-list';
+const _stringListWithDefault = 'string-list-with-default';
+
 const _arguments = {
   //
   _requiredString: '--$_requiredString=abc',
@@ -67,6 +72,12 @@ const _arguments = {
   _requiredEnum: '--$_requiredEnum=apple',
   _optionalEnum: '--$_optionalEnum=banana',
   _enumWithDefault: '--$_enumWithDefault=orange',
+
+  '$_stringList-1': '--$_stringList=abc',
+  '$_stringList-2': '--$_stringList=def',
+
+  '$_stringListWithDefault-1': '--$_stringListWithDefault=ghi',
+  '$_stringListWithDefault-2': '--$_stringListWithDefault=jkl',
 };
 
 const _usageExitCode = 64;
@@ -99,6 +110,8 @@ boolWithDefaultTrue: false (bool)
 requiredEnum: Fruit.apple (Fruit)
 optionalEnum: Fruit.banana (Fruit)
 enumWithDefault: Fruit.orange (Fruit)
+stringList: [abc, def] (List)
+stringListWithDefault: [ghi, jkl] (List)
 ''');
   });
 
@@ -114,192 +127,6 @@ enumWithDefault: Fruit.orange (Fruit)
 
       expect(result.stdout, _helpOutput, reason: option);
     }
-  });
-
-  group('String', () {
-    test('missing required', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_requiredString);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-        expectedExitCode: _usageExitCode,
-      );
-
-      expect(
-        result.stderr,
-        'Option "$_requiredString" is mandatory.\n\n$_helpOutput',
-      );
-    });
-
-    test('skip optional -> null', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_optionalString);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(result.stdout, contains('optionalString: null (String)'));
-    });
-
-    test('skip with initializer -> default', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_stringWithDefault);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(
-        result.stdout,
-        contains('stringWithDefault: My default string. (String)'),
-      );
-    });
-  });
-
-  group('int', () {
-    test('missing required', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_requiredInt);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-        expectedExitCode: _usageExitCode,
-      );
-
-      expect(
-        result.stderr,
-        'Option "$_requiredInt" is mandatory.\n\n$_helpOutput',
-      );
-    });
-
-    test('skip optional -> null', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_optionalInt);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(result.stdout, contains('optionalInt: null (int)'));
-    });
-
-    test('skip with initializer -> default', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_intWithDefault);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(result.stdout, contains('intWithDefault: 7 (int)'));
-    });
-
-    test('parse error for required, optional, and with default', () async {
-      const options = [_requiredInt, _optionalInt, _intWithDefault];
-      const values = ['', 'abc', '3.1415926535'];
-
-      for (final option in options) {
-        for (final value in values) {
-          final arguments = {..._arguments, option: '--$option=$value'};
-
-          final result = await dartRun(
-            [_executable, ...arguments.values],
-            experiments: _experiments,
-            workingDirectory: _workingDirectory,
-            expectedExitCode: _usageExitCode,
-          );
-
-          expect(
-            result.stderr,
-            'Cannot parse the value of "$option" into int, '
-            '"$value" given.\n\n$_helpOutput',
-          );
-        }
-      }
-    });
-  });
-
-  group('double', () {
-    test('missing required', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_requiredDouble);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-        expectedExitCode: _usageExitCode,
-      );
-
-      expect(
-        result.stderr,
-        'Option "$_requiredDouble" is mandatory.\n\n$_helpOutput',
-      );
-    });
-
-    test('skip optional -> null', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_optionalDouble);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(result.stdout, contains('optionalDouble: null (double)'));
-    });
-
-    test('skip with initializer -> default', () async {
-      final arguments = {..._arguments};
-      arguments.remove(_doubleWithDefault);
-
-      final result = await dartRun(
-        [_executable, ...arguments.values],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-      );
-
-      expect(result.stdout, contains('doubleWithDefault: 7.77 (double)'));
-    });
-
-    test('parse error for required, optional, and with default', () async {
-      const options = [_requiredDouble, _optionalDouble, _doubleWithDefault];
-      const values = ['', 'abc'];
-
-      for (final option in options) {
-        for (final value in values) {
-          final arguments = {..._arguments, option: '--$option=$value'};
-
-          final result = await dartRun(
-            [_executable, ...arguments.values],
-            experiments: _experiments,
-            workingDirectory: _workingDirectory,
-            expectedExitCode: _usageExitCode,
-          );
-
-          expect(
-            result.stderr,
-            'Cannot parse the value of "$option" into double, '
-            '"$value" given.\n\n$_helpOutput',
-          );
-        }
-      }
-    });
   });
 
   group('bool', () {
@@ -376,7 +203,76 @@ enumWithDefault: Fruit.orange (Fruit)
     });
   });
 
-  group('enum', () {
+  group('double', () {
+    test('missing required', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_requiredDouble);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _usageExitCode,
+      );
+
+      expect(
+        result.stderr,
+        'Option "$_requiredDouble" is mandatory.\n\n$_helpOutput',
+      );
+    });
+
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalDouble);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalDouble: null (double)'));
+    });
+
+    test('skip with initializer -> default', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_doubleWithDefault);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('doubleWithDefault: 7.77 (double)'));
+    });
+
+    test('parse error for required, optional, and with default', () async {
+      const options = [_requiredDouble, _optionalDouble, _doubleWithDefault];
+      const values = ['', 'abc'];
+
+      for (final option in options) {
+        for (final value in values) {
+          final arguments = {..._arguments, option: '--$option=$value'};
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+            expectedExitCode: _usageExitCode,
+          );
+
+          expect(
+            result.stderr,
+            'Cannot parse the value of "$option" into double, '
+            '"$value" given.\n\n$_helpOutput',
+          );
+        }
+      }
+    });
+  });
+
+  group('Enum', () {
     test('missing required', () async {
       final arguments = {..._arguments};
       arguments.remove(_requiredEnum);
@@ -445,8 +341,236 @@ enumWithDefault: Fruit.orange (Fruit)
     });
   });
 
-  group('Common errors.', () {
-    test('Final with default', () async {
+  group('int', () {
+    test('missing required', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_requiredInt);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _usageExitCode,
+      );
+
+      expect(
+        result.stderr,
+        'Option "$_requiredInt" is mandatory.\n\n$_helpOutput',
+      );
+    });
+
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalInt);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalInt: null (int)'));
+    });
+
+    test('skip with initializer -> default', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_intWithDefault);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('intWithDefault: 7 (int)'));
+    });
+
+    test('parse error for required, optional, and with default', () async {
+      const options = [_requiredInt, _optionalInt, _intWithDefault];
+      const values = ['', 'abc', '3.1415926535'];
+
+      for (final option in options) {
+        for (final value in values) {
+          final arguments = {..._arguments, option: '--$option=$value'};
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+            expectedExitCode: _usageExitCode,
+          );
+
+          expect(
+            result.stderr,
+            'Cannot parse the value of "$option" into int, '
+            '"$value" given.\n\n$_helpOutput',
+          );
+        }
+      }
+    });
+  });
+
+  group('List', () {
+    group('String', () {
+      test('skip -> empty', () async {
+        final arguments = {..._arguments};
+        arguments.remove('$_stringList-1');
+        arguments.remove('$_stringList-2');
+
+        final result = await dartRun(
+          [_executable, ...arguments.values],
+          experiments: _experiments,
+          workingDirectory: _workingDirectory,
+        );
+
+        expect(result.stdout, contains('stringList: [] (List)'));
+      });
+
+      test('skip with initializer -> default', () async {
+        final arguments = {..._arguments};
+        arguments.remove('$_stringListWithDefault-1');
+        arguments.remove('$_stringListWithDefault-2');
+
+        final result = await dartRun(
+          [_executable, ...arguments.values],
+          experiments: _experiments,
+          workingDirectory: _workingDirectory,
+        );
+
+        expect(
+          result.stdout,
+          contains('stringListWithDefault: [Huey, Dewey, Louie] (List)'),
+        );
+      });
+
+      test('1', () async {
+        final arguments = {..._arguments};
+        arguments.remove('$_stringList-1');
+
+        final result = await dartRun(
+          [_executable, ...arguments.values],
+          experiments: _experiments,
+          workingDirectory: _workingDirectory,
+        );
+
+        expect(result.stdout, contains('stringList: [def] (List)'));
+      });
+    });
+
+    group('Common', () {
+      test('cannot be null', () async {
+        final result = await dartRun(
+          ['lib/error_list_nullable.dart'],
+          experiments: _experiments,
+          workingDirectory: _workingDirectory,
+          expectedExitCode: _compileErrorExitCode,
+        );
+
+        expect(
+          result.stderr,
+          stringContainsNTimes(
+            'A list cannot be nullable because it is just empty '
+            'when no options with this name are passed.',
+            1,
+          ),
+        );
+        expect(result.stderr, stringContainsNTimes('Error:', 1));
+      });
+    });
+  });
+
+  group('String', () {
+    test('missing required', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_requiredString);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _usageExitCode,
+      );
+
+      expect(
+        result.stderr,
+        'Option "$_requiredString" is mandatory.\n\n$_helpOutput',
+      );
+    });
+
+    test('skip optional -> null', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_optionalString);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(result.stdout, contains('optionalString: null (String)'));
+    });
+
+    test('skip with initializer -> default', () async {
+      final arguments = {..._arguments};
+      arguments.remove(_stringWithDefault);
+
+      final result = await dartRun(
+        [_executable, ...arguments.values],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+      );
+
+      expect(
+        result.stdout,
+        contains('stringWithDefault: My default string. (String)'),
+      );
+    });
+  });
+
+  group('General errors.', () {
+    test('error_types', () async {
+      final result = await dartRun(
+        ['lib/error_types.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+      );
+
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'The only allowed types are: String, int, double, bool, Enum, '
+          'List<String>, List<int>, List<double>, List<bool>, List<Enum>.',
+          2,
+        ),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes('Expected 0 type arguments.', 1),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes('Cannot resolve type: GenericListAlias.', 1),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A list requires a type parameter: '
+          'List<String>, List<int>, List<bool>, List<Enum>.',
+          2,
+        ),
+      );
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'Required named parameter',
+          2,
+        ),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 8));
+    });
+
+    test('error_final_with_default', () async {
       final result = await dartRun(
         ['lib/error_final_with_default.dart'],
         experiments: _experiments,
@@ -459,13 +583,13 @@ enumWithDefault: Fruit.orange (Fruit)
         stringContainsNTimes(
           'A field with an initializer cannot be final '
           'because it needs to be overwritten when parsing the argument.',
-          5,
+          6,
         ),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 5));
+      expect(result.stderr, stringContainsNTimes('Error:', 6));
     });
 
-    test('Nullable with default', () async {
+    test('error_nullable_with_default', () async {
       final result = await dartRun(
         ['lib/error_nullable_with_default.dart'],
         experiments: _experiments,
@@ -486,7 +610,15 @@ enumWithDefault: Fruit.orange (Fruit)
         result.stderr,
         stringContainsNTimes('Boolean cannot be nullable.', 1),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 5));
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A list cannot be nullable because it is just empty '
+          'when no options with this name are passed.',
+          1,
+        ),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 6));
     });
   });
 }

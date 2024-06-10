@@ -95,6 +95,14 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitListString(ListStringArgument argument) {
+    return [
+      argument.intr.name,
+      ': const []',
+    ];
+  }
+
+  @override
   List<Object> visitString(StringArgument argument) {
     return [
       argument.intr.name,

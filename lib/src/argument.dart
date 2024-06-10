@@ -118,6 +118,21 @@ class IntArgument extends Argument {
   }
 }
 
+/// A List<String> argument.
+class ListStringArgument extends Argument {
+  // ignore: public_member_api_docs
+  ListStringArgument({
+    required super.intr,
+    required super.isValid,
+    required super.optionName,
+  });
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitListString(this);
+  }
+}
+
 /// A [String] argument.
 class StringArgument extends Argument {
   // ignore: public_member_api_docs

@@ -93,15 +93,15 @@ class MyArgs {
 
 #### bool
 
-Boolean fields produce flags.
-Boolean fields must have an initializer because they cannot be required
+A boolean field produces a flag.
+A boolean field must have an initializer because it cannot be required
 since missing a flag just means the opposite of its presence.
-For the same reason, boolean fields can't be nullable.
+For the same reason, a boolean field can't be nullable.
 
 Most of the times you want a boolean with the default of `false`
 so that adding a flag turns it to true.
 
-An field with the default of `true` produces a flag to negate it,
+A field with the default of `true` produces a flag to negate it,
 and `no-` is prepended to the flag name.
 
 ```dart

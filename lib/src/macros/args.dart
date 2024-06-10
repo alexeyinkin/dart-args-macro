@@ -225,7 +225,7 @@ Future<IntrospectionData> _introspect(
   final codes = Codes.fromResolvedIdentifiers(ids);
 
   final (fields, staticTypes) = await (
-    builder.introspectType(clazz),
+    builder.introspectFields(clazz),
     StaticTypes.fill(builder, codes),
   ).wait;
 
@@ -269,46 +269,56 @@ Future<Argument?> _fieldToArgument(
   required StaticTypes staticTypes,
 }) async {
   final field = fieldIntr.fieldDeclaration;
+  final target = field.asDiagnosticTarget;
   final type = field.type;
-  final classDecl = fieldIntr.unaliasedTypeDeclaration;
+  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
 
   bool isValid = true;
 
+  void unsupportedType() {
+    builder.reportError(
+      'The only allowed types are: String, int, double, bool, Enum, '
+      'List<String>, List<int>, List<double>, List<bool>, List<Enum>.',
+      target: target,
+    );
+  }
+
+  if (type is! NamedTypeAnnotation) {
+    unsupportedType();
+    return null;
+  }
+
   if (field.hasInitializer && field.hasFinal) {
-    builder.report(
-      Diagnostic(
-        DiagnosticMessage(
-          'A field with an initializer cannot be final '
-          'because it needs to be overwritten when parsing the argument.',
-          target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
-        ),
-        Severity.error,
-      ),
+    builder.reportError(
+      'A field with an initializer cannot be final '
+      'because it needs to be overwritten when parsing the argument.',
+      target: target,
     );
 
     isValid = false;
   }
 
-  if (classDecl.identifier.name != 'bool') {
-    if (field.hasInitializer && type.isNullable) {
-      builder.report(
-        Diagnostic(
-          DiagnosticMessage(
-            'A field with an initializer must be non-nullable '
-            'because nullability and the default value '
-            'are mutually exclusive ways to handle a missing value.',
-            target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
-          ),
-          Severity.error,
-        ),
-      );
+  switch (typeDecl.identifier.name) {
+    case 'bool':
+    case 'List':
+      // These have more specific messages for nullability later.
+      break;
 
-      isValid = false;
-    }
+    default:
+      if (field.hasInitializer && type.isNullable) {
+        builder.reportError(
+          'A field with an initializer must be non-nullable '
+          'because nullability and the default value '
+          'are mutually exclusive ways to handle a missing value.',
+          target: target,
+        );
+
+        isValid = false;
+      }
   }
 
-  if (classDecl.library.uri != Libraries.core) {
+  if (typeDecl.library.uri != Libraries.core) {
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
         intr: fieldIntr,
@@ -319,45 +329,30 @@ Future<Argument?> _fieldToArgument(
       );
     }
 
-    builder.report(
-      Diagnostic(
-        DiagnosticMessage(
-          'An argument class can only have fields of core types, '
-          '${fieldIntr.unaliasedTypeDeclaration.identifier.name} given. ',
-          target: fieldIntr.fieldDeclaration.asDiagnosticTarget,
-        ),
-        Severity.error,
-      ),
+    builder.reportError(
+      'An argument class can only have fields of core types, '
+      '${fieldIntr.unaliasedTypeDeclaration.identifier.name} given.',
+      target: target,
     );
 
     return null;
   }
 
-  switch (classDecl.identifier.name) {
+  switch (typeDecl.identifier.name) {
     case 'bool':
       if (type.isNullable) {
-        builder.report(
-          Diagnostic(
-            DiagnosticMessage(
-              'Boolean cannot be nullable.',
-              target: field.asDiagnosticTarget,
-            ),
-            Severity.error,
-          ),
+        builder.reportError(
+          'Boolean cannot be nullable.',
+          target: target,
         );
 
         isValid = false;
       }
 
       if (!field.hasInitializer) {
-        builder.report(
-          Diagnostic(
-            DiagnosticMessage(
-              'Boolean must have a default value.',
-              target: field.asDiagnosticTarget,
-            ),
-            Severity.error,
-          ),
+        builder.reportError(
+          'Boolean must have a default value.',
+          target: target,
         );
 
         isValid = false;
@@ -383,6 +378,48 @@ Future<Argument?> _fieldToArgument(
         optionName: optionName,
       );
 
+    case 'List':
+      if (type.isNullable) {
+        builder.reportError(
+          'A list cannot be nullable because it is just empty '
+          'when no options with this name are passed.',
+          target: target,
+        );
+
+        isValid = false;
+      }
+
+      final paramType = type.typeArguments.firstOrNull;
+      if (paramType == null) {
+        builder.reportError(
+          'A list requires a type parameter: '
+          'List<String>, List<int>, List<bool>, List<Enum>.',
+          target: target,
+        );
+        return null;
+      }
+
+      if (paramType is! NamedTypeAnnotation) {
+        unsupportedType();
+        return null;
+      }
+
+      final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
+
+      // TODO: Enum?
+      // if (paramTypeDecl.library.uri != Libraries.core) {
+      //
+      // }
+
+      switch (paramTypeDecl.identifier.name) {
+        case 'String':
+          return ListStringArgument(
+            intr: fieldIntr,
+            isValid: isValid,
+            optionName: optionName,
+          );
+      }
+
     case 'String':
       return StringArgument(
         intr: fieldIntr,
@@ -391,5 +428,6 @@ Future<Argument?> _fieldToArgument(
       );
   }
 
+  unsupportedType();
   return null;
 }

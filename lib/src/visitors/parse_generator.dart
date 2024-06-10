@@ -95,6 +95,16 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       _visitIntDouble(argument, intr.codes.int);
 
   @override
+  List<Object> visitListString(ListStringArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    return [
+      argument.intr.name,
+      ': $valueGetter',
+    ];
+  }
+
+  @override
   List<Object> visitString(StringArgument argument) {
     final valueGetter = _getOptionValueGetter(argument);
 
@@ -131,5 +141,9 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
 
   String _getOptionValueGetter(Argument argument) {
     return 'wrapped.option(${jsonEncode(argument.optionName)})';
+  }
+
+  String _getMultiOptionValueGetter(Argument argument) {
+    return 'wrapped.multiOption(${jsonEncode(argument.optionName)})';
   }
 }
