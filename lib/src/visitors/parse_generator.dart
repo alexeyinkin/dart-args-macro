@@ -56,14 +56,6 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   List<Object> visitBool(BoolArgument argument) {
     final def = '${MockDataObjectGenerator.fieldName}.${argument.intr.name}';
 
-    if (!argument.isValid) {
-      // Can be nullable and break the '?:' operator.
-      return [
-        argument.intr.name,
-        ': false',
-      ];
-    }
-
     return [
       argument.intr.name,
       ': ',

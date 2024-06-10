@@ -2,7 +2,8 @@ import 'package:args_macro/args_macro.dart';
 
 @Args()
 class MyArgs {
-  final bool? nullableBool = null;
+  bool? nullableBool = null;
+  final bool? finalNullableBool = null;
 }
 
 void main() {}

@@ -328,10 +328,13 @@ Future<Argument?> _fieldToArgument(
   }
 
   if (typeDecl.library.uri != Libraries.core) {
+    if (!isValid) {
+      return InvalidTypeArgument(intr: fieldIntr);
+    }
+
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
         intr: fieldIntr,
-        isValid: isValid,
         optionName: optionName,
         enumIntr:
             await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
@@ -368,23 +371,32 @@ Future<Argument?> _fieldToArgument(
         isValid = false;
       }
 
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return BoolArgument(
         intr: fieldIntr,
-        isValid: isValid,
         optionName: optionName,
       );
 
     case 'double':
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return DoubleArgument(
         intr: fieldIntr,
-        isValid: isValid,
         optionName: optionName,
       );
 
     case 'int':
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return IntArgument(
         intr: fieldIntr,
-        isValid: isValid,
         optionName: optionName,
       );
 
@@ -424,11 +436,14 @@ Future<Argument?> _fieldToArgument(
       //
       // }
 
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       switch (paramTypeDecl.identifier.name) {
         case 'int':
           return IterableIntArgument(
             intr: fieldIntr,
-            isValid: isValid,
             iterableType: IterableType.values.byName(typeName.toLowerCase()),
             optionName: optionName,
           );
@@ -436,16 +451,18 @@ Future<Argument?> _fieldToArgument(
         case 'String':
           return IterableStringArgument(
             intr: fieldIntr,
-            isValid: isValid,
             iterableType: IterableType.values.byName(typeName.toLowerCase()),
             optionName: optionName,
           );
       }
 
     case 'String':
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return StringArgument(
         intr: fieldIntr,
-        isValid: isValid,
         optionName: optionName,
       );
   }

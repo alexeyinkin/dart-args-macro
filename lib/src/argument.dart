@@ -8,18 +8,11 @@ import 'visitors/visitor.dart';
 sealed class Argument {
   Argument({
     required this.intr,
-    required this.isValid,
     required this.optionName,
   });
 
   // ignore: public_member_api_docs
   final FieldIntrospectionData intr;
-
-  /// Whether this argument meets all requirements for its type.
-  ///
-  /// If any argument is not [isValid], the program will not build.
-  /// An invalid argument may still be [isInConstructor].
-  final bool isValid;
 
   /// The name for this option or flag.
   ///
@@ -32,14 +25,14 @@ sealed class Argument {
 
   /// Whether this argument should be passed to the unnamed constructor
   /// of the data class.
-  ///
-  /// This argument may be not [isValid] but still required in the constructor
-  /// because the macro that generates constructors is not aware
-  /// of the argument semantics.
-  /// To avoid compile errors, this is tested when generating a call
-  /// to the constructor.
   bool get isInConstructor =>
       !intr.fieldDeclaration.hasFinal || !intr.fieldDeclaration.hasInitializer;
+
+  /// Whether this argument meets all requirements for its type.
+  ///
+  /// If any argument is not [isValid], the program will not build.
+  /// An invalid argument may still be [isInConstructor].
+  bool get isValid => true;
 }
 
 /// An argument backed by a field with a successfully resolved type.
@@ -47,7 +40,6 @@ abstract class ResolvedTypeArgument extends Argument {
   // ignore: public_member_api_docs
   ResolvedTypeArgument({
     required ResolvedFieldIntrospectionData super.intr,
-    required super.isValid,
     required super.optionName,
   });
 
@@ -61,7 +53,6 @@ class BoolArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   BoolArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
   });
 
@@ -88,7 +79,6 @@ class DoubleArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   DoubleArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
   });
 
@@ -103,7 +93,6 @@ class EnumArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   EnumArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
     required this.enumIntr,
   });
@@ -122,7 +111,6 @@ class IntArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   IntArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
   });
 
@@ -140,7 +128,10 @@ class InvalidTypeArgument extends Argument {
   // ignore: public_member_api_docs
   InvalidTypeArgument({
     required super.intr,
-  }) : super(isValid: false, optionName: '');
+  }) : super(optionName: '',);
+
+  @override
+  bool get isValid => false;
 
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
@@ -153,7 +144,6 @@ abstract class IterableArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   IterableArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
     required this.iterableType,
   });
@@ -167,7 +157,6 @@ class IterableStringArgument extends IterableArgument {
   // ignore: public_member_api_docs
   IterableStringArgument({
     required super.intr,
-    required super.isValid,
     required super.iterableType,
     required super.optionName,
   });
@@ -183,7 +172,6 @@ class IterableIntArgument extends IterableArgument {
   // ignore: public_member_api_docs
   IterableIntArgument({
     required super.intr,
-    required super.isValid,
     required super.iterableType,
     required super.optionName,
   });
@@ -208,7 +196,6 @@ class StringArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   StringArgument({
     required super.intr,
-    required super.isValid,
     required super.optionName,
   });
 

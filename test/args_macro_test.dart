@@ -221,7 +221,7 @@ intSetWithDefault: {8, 9} (Set)
 
       expect(
         result.stderr,
-        stringContainsNTimes('Boolean cannot be nullable.', 1),
+        stringContainsNTimes('Boolean cannot be nullable.', 2),
       );
       expect(
         result.stderr,
@@ -231,7 +231,7 @@ intSetWithDefault: {8, 9} (Set)
           1,
         ),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 2));
+      expect(result.stderr, stringContainsNTimes('Error:', 3));
     });
 
     test('cannot be non-nullable required without default', () async {
