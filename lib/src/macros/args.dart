@@ -9,6 +9,7 @@ import '../argument.dart';
 import '../arguments.dart';
 import '../codes.dart';
 import '../enum_introspection_data.dart';
+import '../identifiers.dart';
 import '../introspection_data.dart';
 import '../libraries.dart';
 import '../resolved_identifiers.dart';
@@ -55,7 +56,6 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
   ) async {
-    builder.log('buildDeclarationsForClass');
     final intr = await _introspect(clazz, builder);
 
     await _declareConstructors(clazz, builder);
@@ -97,6 +97,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.codes.ArgParser, '();\n',
+        '  static ${Identifiers.silenceUninitializedError}() {}\n',
         ...MockDataObjectGenerator(clazz, intr).generate().indent(),
         ..._getConstructor(clazz).indent(),
         ...AddOptionsGenerator(intr).generate().indent(),
@@ -270,24 +271,31 @@ Future<Argument?> _fieldToArgument(
 }) async {
   final field = fieldIntr.fieldDeclaration;
   final target = field.asDiagnosticTarget;
-  final type = field.type;
-  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
-  final optionName = _camelToKebabCase(fieldIntr.name);
-
-  bool isValid = true;
 
   void unsupportedType() {
     builder.reportError(
       'The only allowed types are: String, int, double, bool, Enum, '
-      'List<String>, List<int>, List<double>, List<bool>, List<Enum>.',
+      'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
+      'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
       target: target,
     );
   }
+
+  if (fieldIntr is! ResolvedFieldIntrospectionData) {
+    unsupportedType();
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
+  final type = field.type;
+  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
+  final optionName = _camelToKebabCase(fieldIntr.name);
 
   if (type is! NamedTypeAnnotation) {
     unsupportedType();
     return null;
   }
+
+  bool isValid = true;
 
   if (field.hasInitializer && field.hasFinal) {
     builder.reportError(
@@ -302,6 +310,7 @@ Future<Argument?> _fieldToArgument(
   switch (typeDecl.identifier.name) {
     case 'bool':
     case 'List':
+    case 'Set':
       // These have more specific messages for nullability later.
       break;
 
@@ -335,10 +344,11 @@ Future<Argument?> _fieldToArgument(
       target: target,
     );
 
-    return null;
+    return null; // TODO: Test a custom class.
   }
 
-  switch (typeDecl.identifier.name) {
+  final typeName = typeDecl.identifier.name;
+  switch (typeName) {
     case 'bool':
       if (type.isNullable) {
         builder.reportError(
@@ -379,9 +389,10 @@ Future<Argument?> _fieldToArgument(
       );
 
     case 'List':
+    case 'Set':
       if (type.isNullable) {
         builder.reportError(
-          'A list cannot be nullable because it is just empty '
+          'A $typeName cannot be nullable because it is just empty '
           'when no options with this name are passed.',
           target: target,
         );
@@ -392,16 +403,18 @@ Future<Argument?> _fieldToArgument(
       final paramType = type.typeArguments.firstOrNull;
       if (paramType == null) {
         builder.reportError(
-          'A list requires a type parameter: '
-          'List<String>, List<int>, List<bool>, List<Enum>.',
+          'A $typeName requires a type parameter: '
+          '$typeName<String>, $typeName<int>, $typeName<double>, '
+          '$typeName<bool>, $typeName<Enum>.',
           target: target,
         );
-        return null;
+
+        return InvalidTypeArgument(intr: fieldIntr);
       }
 
       if (paramType is! NamedTypeAnnotation) {
         unsupportedType();
-        return null;
+        return InvalidTypeArgument(intr: fieldIntr);
       }
 
       final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
@@ -413,9 +426,10 @@ Future<Argument?> _fieldToArgument(
 
       switch (paramTypeDecl.identifier.name) {
         case 'String':
-          return ListStringArgument(
+          return IterableStringArgument(
             intr: fieldIntr,
             isValid: isValid,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
             optionName: optionName,
           );
       }
@@ -429,5 +443,5 @@ Future<Argument?> _fieldToArgument(
   }
 
   unsupportedType();
-  return null;
+  return InvalidTypeArgument(intr: fieldIntr);
 }

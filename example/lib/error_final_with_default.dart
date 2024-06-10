@@ -7,6 +7,7 @@ class MyArgs {
   final MyEnum e = MyEnum.a;
   final int n = 1;
   final List<String> listStr = ['aaa'];
+  final Set<String> setStr = {'bbb'};
   final String str = 'abc';
 }
 
@@ -14,4 +15,4 @@ enum MyEnum {
   a,
 }
 
-void main(List<String> argv) {}
+void main() {}

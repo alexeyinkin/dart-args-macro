@@ -26,6 +26,8 @@ Usage: executable_name [arguments]
     --enum-with-default              [apple, banana, mango (default), orange]
     --string-list                   ⎵
     --string-list-with-default       (defaults to "Huey", "Dewey", "Louie")
+    --string-set                    ⎵
+    --string-set-with-default        (defaults to "Huey", "Dewey", "Louie")
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
@@ -52,6 +54,9 @@ const _enumWithDefault = 'enum-with-default';
 const _stringList = 'string-list';
 const _stringListWithDefault = 'string-list-with-default';
 
+const _stringSet = 'string-set';
+const _stringSetWithDefault = 'string-set-with-default';
+
 const _arguments = {
   //
   _requiredString: '--$_requiredString=abc',
@@ -75,9 +80,19 @@ const _arguments = {
 
   '$_stringList-1': '--$_stringList=abc',
   '$_stringList-2': '--$_stringList=def',
+  '$_stringList-3': '--$_stringList=def',
 
   '$_stringListWithDefault-1': '--$_stringListWithDefault=ghi',
   '$_stringListWithDefault-2': '--$_stringListWithDefault=jkl',
+  '$_stringListWithDefault-3': '--$_stringListWithDefault=jkl',
+
+  '$_stringSet-1': '--$_stringSet=abc',
+  '$_stringSet-2': '--$_stringSet=def',
+  '$_stringSet-3': '--$_stringSet=def',
+
+  '$_stringSetWithDefault-1': '--$_stringSetWithDefault=ghi',
+  '$_stringSetWithDefault-2': '--$_stringSetWithDefault=jkl',
+  '$_stringSetWithDefault-3': '--$_stringSetWithDefault=jkl',
 };
 
 const _usageExitCode = 64;
@@ -110,8 +125,10 @@ boolWithDefaultTrue: false (bool)
 requiredEnum: Fruit.apple (Fruit)
 optionalEnum: Fruit.banana (Fruit)
 enumWithDefault: Fruit.orange (Fruit)
-stringList: [abc, def] (List)
-stringListWithDefault: [ghi, jkl] (List)
+stringList: [abc, def, def] (List)
+stringListWithDefault: [ghi, jkl, jkl] (List)
+stringSet: {abc, def} (Set)
+stringSetWithDefault: {ghi, jkl} (Set)
 ''');
   });
 
@@ -410,57 +427,111 @@ stringListWithDefault: [ghi, jkl] (List)
     });
   });
 
-  group('List', () {
+  group('Iterable', () {
     group('String', () {
-      test('skip -> empty', () async {
-        final arguments = {..._arguments};
-        arguments.remove('$_stringList-1');
-        arguments.remove('$_stringList-2');
+      group('List', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringList-1');
+          arguments.remove('$_stringList-2');
+          arguments.remove('$_stringList-3');
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
 
-        expect(result.stdout, contains('stringList: [] (List)'));
+          expect(result.stdout, contains('stringList: [] (List)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringListWithDefault-1');
+          arguments.remove('$_stringListWithDefault-2');
+          arguments.remove('$_stringListWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('stringListWithDefault: [Huey, Dewey, Louie] (List)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringList-1');
+          arguments.remove('$_stringList-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('stringList: [def] (List)'));
+        });
       });
 
-      test('skip with initializer -> default', () async {
-        final arguments = {..._arguments};
-        arguments.remove('$_stringListWithDefault-1');
-        arguments.remove('$_stringListWithDefault-2');
+      group('Set', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringSet-1');
+          arguments.remove('$_stringSet-2');
+          arguments.remove('$_stringSet-3');
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
 
-        expect(
-          result.stdout,
-          contains('stringListWithDefault: [Huey, Dewey, Louie] (List)'),
-        );
-      });
+          expect(result.stdout, contains('stringSet: {} (Set)'));
+        });
 
-      test('1', () async {
-        final arguments = {..._arguments};
-        arguments.remove('$_stringList-1');
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringSetWithDefault-1');
+          arguments.remove('$_stringSetWithDefault-2');
+          arguments.remove('$_stringSetWithDefault-3');
 
-        final result = await dartRun(
-          [_executable, ...arguments.values],
-          experiments: _experiments,
-          workingDirectory: _workingDirectory,
-        );
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
 
-        expect(result.stdout, contains('stringList: [def] (List)'));
+          expect(
+            result.stdout,
+            contains('stringSetWithDefault: {Huey, Dewey, Louie} (Set)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_stringSet-1');
+          arguments.remove('$_stringSet-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('stringSet: {def} (Set)'));
+        });
       });
     });
 
-    group('Common', () {
-      test('cannot be null', () async {
+    group('Generic', () {
+      test('error_iterable_nullable', () async {
         final result = await dartRun(
-          ['lib/error_list_nullable.dart'],
+          ['lib/error_iterable_nullable.dart'],
           experiments: _experiments,
           workingDirectory: _workingDirectory,
           expectedExitCode: _compileErrorExitCode,
@@ -469,12 +540,20 @@ stringListWithDefault: [ghi, jkl] (List)
         expect(
           result.stderr,
           stringContainsNTimes(
-            'A list cannot be nullable because it is just empty '
+            'A List cannot be nullable because it is just empty '
             'when no options with this name are passed.',
             1,
           ),
         );
-        expect(result.stderr, stringContainsNTimes('Error:', 1));
+        expect(
+          result.stderr,
+          stringContainsNTimes(
+            'A Set cannot be nullable because it is just empty '
+            'when no options with this name are passed.',
+            1,
+          ),
+        );
+        expect(result.stderr, stringContainsNTimes('Error:', 2));
       });
     });
   });
@@ -540,8 +619,9 @@ stringListWithDefault: [ghi, jkl] (List)
         result.stderr,
         stringContainsNTimes(
           'The only allowed types are: String, int, double, bool, Enum, '
-          'List<String>, List<int>, List<double>, List<bool>, List<Enum>.',
-          2,
+          'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
+          'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
+          4,
         ),
       );
       expect(
@@ -550,24 +630,27 @@ stringListWithDefault: [ghi, jkl] (List)
       );
       expect(
         result.stderr,
-        stringContainsNTimes('Cannot resolve type: GenericListAlias.', 1),
+        stringContainsNTimes('Cannot resolve type.', 1),
       );
       expect(
         result.stderr,
         stringContainsNTimes(
-          'A list requires a type parameter: '
-          'List<String>, List<int>, List<bool>, List<Enum>.',
+          'A List requires a type parameter: '
+          'List<String>, List<int>, List<double>, '
+          'List<bool>, List<Enum>.',
           2,
         ),
       );
       expect(
         result.stderr,
         stringContainsNTimes(
-          'Required named parameter',
-          2,
+          'A Set requires a type parameter: '
+          'Set<String>, Set<int>, Set<double>, '
+          'Set<bool>, Set<Enum>.',
+          1,
         ),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 8));
+      expect(result.stderr, stringContainsNTimes('Error:', 9));
     });
 
     test('error_final_with_default', () async {
@@ -583,7 +666,7 @@ stringListWithDefault: [ghi, jkl] (List)
         stringContainsNTimes(
           'A field with an initializer cannot be final '
           'because it needs to be overwritten when parsing the argument.',
-          6,
+          7,
         ),
       );
       expect(result.stderr, stringContainsNTimes('Error:', 6));
@@ -613,12 +696,20 @@ stringListWithDefault: [ghi, jkl] (List)
       expect(
         result.stderr,
         stringContainsNTimes(
-          'A list cannot be nullable because it is just empty '
+          'A List cannot be nullable because it is just empty '
           'when no options with this name are passed.',
           1,
         ),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 6));
+      expect(
+        result.stderr,
+        stringContainsNTimes(
+          'A Set cannot be nullable because it is just empty '
+          'when no options with this name are passed.',
+          1,
+        ),
+      );
+      expect(result.stderr, stringContainsNTimes('Error:', 7));
     });
   });
 }

@@ -42,8 +42,22 @@ sealed class Argument {
       !intr.fieldDeclaration.hasFinal || !intr.fieldDeclaration.hasInitializer;
 }
 
+/// An argument backed by a field with a successfully resolved type.
+abstract class ResolvedTypeArgument extends Argument {
+  // ignore: public_member_api_docs
+  ResolvedTypeArgument({
+    required ResolvedFieldIntrospectionData super.intr,
+    required super.isValid,
+    required super.optionName,
+  });
+
+  @override
+  ResolvedFieldIntrospectionData get intr =>
+      super.intr as ResolvedFieldIntrospectionData;
+}
+
 /// A boolean flag.
-class BoolArgument extends Argument {
+class BoolArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   BoolArgument({
     required super.intr,
@@ -70,7 +84,7 @@ class BoolArgument extends Argument {
 }
 
 /// A [double] argument.
-class DoubleArgument extends Argument {
+class DoubleArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   DoubleArgument({
     required super.intr,
@@ -85,7 +99,7 @@ class DoubleArgument extends Argument {
 }
 
 /// An [Enum] argument.
-class EnumArgument extends Argument {
+class EnumArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   EnumArgument({
     required super.intr,
@@ -104,7 +118,7 @@ class EnumArgument extends Argument {
 }
 
 /// An [int] argument.
-class IntArgument extends Argument {
+class IntArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   IntArgument({
     required super.intr,
@@ -118,23 +132,52 @@ class IntArgument extends Argument {
   }
 }
 
-/// A List<String> argument.
-class ListStringArgument extends Argument {
+/// A placeholder [Argument] for any invalid field.
+///
+/// Used to pass a value in the constructors to silence the error
+/// of an uninitialized field.
+class InvalidTypeArgument extends Argument {
   // ignore: public_member_api_docs
-  ListStringArgument({
+  InvalidTypeArgument({
     required super.intr,
-    required super.isValid,
-    required super.optionName,
-  });
+  }) : super(isValid: false, optionName: '');
 
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
-    return visitor.visitListString(this);
+    return visitor.visitInvalidType(this);
   }
 }
 
+/// A List<String> or Set<String> argument.
+class IterableStringArgument extends ResolvedTypeArgument {
+  // ignore: public_member_api_docs
+  IterableStringArgument({
+    required super.intr,
+    required super.isValid,
+    required super.optionName,
+    required this.iterableType,
+  });
+
+  // ignore: public_member_api_docs
+  final IterableType iterableType;
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableString(this);
+  }
+}
+
+/// A type of an [Iterable] supported for argument parsing.
+enum IterableType {
+  /// A [List].
+  list,
+
+  /// A [Set].
+  set,
+}
+
 /// A [String] argument.
-class StringArgument extends Argument {
+class StringArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
   StringArgument({
     required super.intr,

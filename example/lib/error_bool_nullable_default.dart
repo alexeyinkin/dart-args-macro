@@ -5,4 +5,4 @@ class MyArgs {
   final bool? nullableBool = null;
 }
 
-void main(List<String> argv) {}
+void main() {}

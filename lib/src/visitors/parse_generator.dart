@@ -4,6 +4,7 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
+import '../identifiers.dart';
 import '../introspection_data.dart';
 import 'mock_data_object_generator.dart';
 import 'visitor.dart';
@@ -95,13 +96,31 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       _visitIntDouble(argument, intr.codes.int);
 
   @override
-  List<Object> visitListString(ListStringArgument argument) {
-    final valueGetter = _getMultiOptionValueGetter(argument);
-
+  List<Object> visitInvalidType(InvalidTypeArgument argument) {
     return [
       argument.intr.name,
-      ': $valueGetter',
+      ': ',
+      Identifiers.silenceUninitializedError,
+      '()',
     ];
+  }
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          argument.intr.name,
+          ': $valueGetter',
+        ];
+      case IterableType.set:
+        return [
+          argument.intr.name,
+          ': $valueGetter.toSet()',
+        ];
+    }
   }
 
   @override

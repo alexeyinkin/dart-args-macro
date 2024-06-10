@@ -73,7 +73,12 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       _visitStringIntDouble(argument);
 
   @override
-  List<Object> visitListString(ListStringArgument argument) {
+  List<Object> visitInvalidType(InvalidTypeArgument argument) {
+    return const [];
+  }
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) {
     final field = argument.intr.fieldDeclaration;
 
     return [

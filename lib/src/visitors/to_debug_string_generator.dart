@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:macro_util/macro_util.dart';
 
+import '../argument.dart';
 import '../introspection_data.dart';
 
 /// Generates 'toDebugString()' function on the data class
@@ -25,13 +26,19 @@ class ToDebugStringGenerator {
       c.String, ' toDebugString() {\n',
       '  final buffer = ', c.StringBuffer, '();\n\n',
       for (final argument in intr.arguments.arguments.values)
-        ...[..._fieldToDebugString(argument.intr), '\n'].indent(),
+        ...[..._fieldToDebugString(argument), '\n'].indent(),
       '  return buffer.toString();\n',
       '}\n',
     ];
   }
 
-  List<Object> _fieldToDebugString(FieldIntrospectionData fieldIntr) {
+  List<Object> _fieldToDebugString(Argument argument) {
+    final fieldIntr = argument.intr;
+
+    if (fieldIntr is! ResolvedFieldIntrospectionData) {
+      return const [];
+    }
+
     final className = fieldIntr.unaliasedTypeDeclaration.identifier.name;
     return [
       //

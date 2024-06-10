@@ -26,6 +26,9 @@ class MyArgs {
 
   final List<String> stringList;
   List<String> stringListWithDefault = ['Huey', 'Dewey', 'Louie'];
+
+  final Set<String> stringSet;
+  Set<String> stringSetWithDefault = {'Huey', 'Dewey', 'Louie'};
 }
 
 enum Fruit { apple, banana, mango, orange }

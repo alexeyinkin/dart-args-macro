@@ -10,11 +10,13 @@ class MyArgs {
   final List genericList;
   final GenericListAlias genericListAlias;
   final GenericListAlias<String> genericListAliasString;
-  final List<Map> list;
+  final List<Map> listMap;
+  final Set genericSet;
+  final Set<Map> setMap;
 
   // OK.
   final List<String> listString;
   final ListAlias<StringAlias> listAliasStringAlias;
 }
 
-void main(List<String> argv) {}
+void main() {}

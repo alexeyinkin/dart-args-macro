@@ -5,4 +5,4 @@ class MyArgs {
   final bool requiredBool;
 }
 
-void main(List<String> argv) {}
+void main() {}

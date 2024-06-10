@@ -3,6 +3,7 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
+import '../identifiers.dart';
 import '../introspection_data.dart';
 import 'visitor.dart';
 
@@ -95,11 +96,29 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
-  List<Object> visitListString(ListStringArgument argument) {
+  List<Object> visitInvalidType(InvalidTypeArgument argument) {
     return [
       argument.intr.name,
-      ': const []',
+      ': ',
+      Identifiers.silenceUninitializedError,
+      '()',
     ];
+  }
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) {
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          argument.intr.name,
+          ': const []',
+        ];
+      case IterableType.set:
+        return [
+          argument.intr.name,
+          ': const {}',
+        ];
+    }
   }
 
   @override
