@@ -106,7 +106,22 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
-  List<Object> visitIterableString(IterableStringArgument argument) {
+  List<Object> visitIterableInt(IterableIntArgument argument) =>
+      _visitIterable(argument);
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) =>
+      _visitIterable(argument);
+
+  @override
+  List<Object> visitString(StringArgument argument) {
+    return [
+      argument.intr.name,
+      ': ""',
+    ];
+  }
+
+  List<Object> _visitIterable(IterableArgument argument) {
     switch (argument.iterableType) {
       case IterableType.list:
         return [
@@ -119,13 +134,5 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
           ': const {}',
         ];
     }
-  }
-
-  @override
-  List<Object> visitString(StringArgument argument) {
-    return [
-      argument.intr.name,
-      ': ""',
-    ];
   }
 }

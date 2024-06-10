@@ -78,23 +78,12 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
-  List<Object> visitIterableString(IterableStringArgument argument) {
-    final field = argument.intr.fieldDeclaration;
+  List<Object> visitIterableInt(IterableIntArgument argument) =>
+      _visitIterableStringIntDouble(argument);
 
-    return [
-      //
-      'parser.addMultiOption(\n',
-      '  "${argument.optionName}",\n',
-      if (field.hasInitializer) ...[
-        '  defaultsTo: ',
-        MockDataObjectGenerator.fieldName,
-        '.',
-        argument.intr.name,
-        ',\n',
-      ],
-      ');\n',
-    ];
-  }
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) =>
+      _visitIterableStringIntDouble(argument);
 
   @override
   List<Object> visitString(StringArgument argument) =>
@@ -112,10 +101,29 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         MockDataObjectGenerator.fieldName,
         '.',
         argument.intr.name,
-        '?.toString()',
+        '.toString()',
         ',\n',
       ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
+      ');\n',
+    ];
+  }
+
+  List<Object> _visitIterableStringIntDouble(IterableArgument argument) {
+    final field = argument.intr.fieldDeclaration;
+
+    return [
+      //
+      'parser.addMultiOption(\n',
+      '  "${argument.optionName}",\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '.map((e) => e.toString())',
+        ',\n',
+      ],
       ');\n',
     ];
   }

@@ -106,6 +106,13 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitIterableInt(IterableIntArgument argument) =>
+      _visitIterableIntDouble(
+        argument,
+        intr.codes.int,
+      );
+
+  @override
   List<Object> visitIterableString(IterableStringArgument argument) {
     final valueGetter = _getMultiOptionValueGetter(argument);
 
@@ -156,6 +163,40 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       ')',
       ')',
     ];
+  }
+
+  List<Object> _visitIterableIntDouble(
+    IterableIntArgument argument,
+    NamedTypeAnnotationCode typeCode,
+  ) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    final result = [
+      //
+      argument.intr.name,
+      ': $valueGetter.map((e) => ', intr.codes.int, '.tryParse(e) ?? (throw ',
+      intr.codes.ArgumentError,
+      '.value(\n',
+      '  $valueGetter,\n',
+      '  "${argument.optionName}",\n',
+      '  "Cannot parse the value of \\"${argument.optionName}\\" into ${typeCode.name.name}, \\"" + e + "\\" given.",\n',
+      ')', // value
+      ')', // throw
+      ')', // map
+    ];
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          ...result,
+          '.toList(growable: false)',
+        ];
+      case IterableType.set:
+        return [
+          ...result,
+          '.toSet()',
+        ];
+    }
   }
 
   String _getOptionValueGetter(Argument argument) {

@@ -425,6 +425,14 @@ Future<Argument?> _fieldToArgument(
       // }
 
       switch (paramTypeDecl.identifier.name) {
+        case 'int':
+          return IterableIntArgument(
+            intr: fieldIntr,
+            isValid: isValid,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+
         case 'String':
           return IterableStringArgument(
             intr: fieldIntr,

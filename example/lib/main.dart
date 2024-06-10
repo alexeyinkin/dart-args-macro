@@ -27,8 +27,14 @@ class MyArgs {
   final List<String> stringList;
   List<String> stringListWithDefault = ['Huey', 'Dewey', 'Louie'];
 
+  final List<int> intList;
+  List<int> intListWithDefault = [1, 2];
+
   final Set<String> stringSet;
   Set<String> stringSetWithDefault = {'Huey', 'Dewey', 'Louie'};
+
+  final Set<int> intSet;
+  Set<int> intSetWithDefault = {3, 4};
 }
 
 enum Fruit { apple, banana, mango, orange }

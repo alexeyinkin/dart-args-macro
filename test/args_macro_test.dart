@@ -26,8 +26,12 @@ Usage: executable_name [arguments]
     --enum-with-default              [apple, banana, mango (default), orange]
     --string-list                   ⎵
     --string-list-with-default       (defaults to "Huey", "Dewey", "Louie")
+    --int-list                      ⎵
+    --int-list-with-default          (defaults to "1", "2")
     --string-set                    ⎵
     --string-set-with-default        (defaults to "Huey", "Dewey", "Louie")
+    --int-set                       ⎵
+    --int-set-with-default           (defaults to "3", "4")
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
@@ -54,8 +58,14 @@ const _enumWithDefault = 'enum-with-default';
 const _stringList = 'string-list';
 const _stringListWithDefault = 'string-list-with-default';
 
+const _intList = 'int-list';
+const _intListWithDefault = 'int-list-with-default';
+
 const _stringSet = 'string-set';
 const _stringSetWithDefault = 'string-set-with-default';
+
+const _intSet = 'int-set';
+const _intSetWithDefault = 'int-set-with-default';
 
 const _arguments = {
   //
@@ -86,6 +96,14 @@ const _arguments = {
   '$_stringListWithDefault-2': '--$_stringListWithDefault=jkl',
   '$_stringListWithDefault-3': '--$_stringListWithDefault=jkl',
 
+  '$_intList-1': '--$_intList=-1',
+  '$_intList-2': '--$_intList=-2',
+  '$_intList-3': '--$_intList=-2',
+
+  '$_intListWithDefault-1': '--$_intListWithDefault=6',
+  '$_intListWithDefault-2': '--$_intListWithDefault=7',
+  '$_intListWithDefault-3': '--$_intListWithDefault=7',
+
   '$_stringSet-1': '--$_stringSet=abc',
   '$_stringSet-2': '--$_stringSet=def',
   '$_stringSet-3': '--$_stringSet=def',
@@ -93,6 +111,14 @@ const _arguments = {
   '$_stringSetWithDefault-1': '--$_stringSetWithDefault=ghi',
   '$_stringSetWithDefault-2': '--$_stringSetWithDefault=jkl',
   '$_stringSetWithDefault-3': '--$_stringSetWithDefault=jkl',
+
+  '$_intSet-1': '--$_intSet=-3',
+  '$_intSet-2': '--$_intSet=-4',
+  '$_intSet-3': '--$_intSet=-4',
+
+  '$_intSetWithDefault-1': '--$_intSetWithDefault=8',
+  '$_intSetWithDefault-2': '--$_intSetWithDefault=8',
+  '$_intSetWithDefault-3': '--$_intSetWithDefault=9',
 };
 
 const _usageExitCode = 64;
@@ -127,8 +153,12 @@ optionalEnum: Fruit.banana (Fruit)
 enumWithDefault: Fruit.orange (Fruit)
 stringList: [abc, def, def] (List)
 stringListWithDefault: [ghi, jkl, jkl] (List)
+intList: [-1, -2, -2] (List)
+intListWithDefault: [6, 7, 7] (List)
 stringSet: {abc, def} (Set)
 stringSetWithDefault: {ghi, jkl} (Set)
+intSet: {-3, -4} (Set)
+intSetWithDefault: {8, 9} (Set)
 ''');
   });
 
@@ -428,6 +458,140 @@ stringSetWithDefault: {ghi, jkl} (Set)
   });
 
   group('Iterable', () {
+    group('int', () {
+      group('List', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intList-1');
+          arguments.remove('$_intList-2');
+          arguments.remove('$_intList-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('intList: [] (List)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intListWithDefault-1');
+          arguments.remove('$_intListWithDefault-2');
+          arguments.remove('$_intListWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('intListWithDefault: [1, 2] (List)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intList-1');
+          arguments.remove('$_intList-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('intList: [-2] (List)'));
+        });
+      });
+
+      group('Set', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intSet-1');
+          arguments.remove('$_intSet-2');
+          arguments.remove('$_intSet-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('intSet: {} (Set)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intSetWithDefault-1');
+          arguments.remove('$_intSetWithDefault-2');
+          arguments.remove('$_intSetWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('intSetWithDefault: {3, 4} (Set)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_intSet-1');
+          arguments.remove('$_intSet-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('intSet: {-4} (Set)'));
+        });
+      });
+
+      test('parse error', () async {
+        const options = [
+          _intList,
+          _intListWithDefault,
+          _intSet,
+          _intSetWithDefault,
+        ];
+        const values = ['', 'abc', '3.1415926535'];
+
+        for (final option in options) {
+          for (final value in values) {
+            final arguments = {
+              ..._arguments,
+              '$option-1': '--$option=1',
+              '$option-2': '--$option=$value',
+              '$option-3': '--$option=3',
+            };
+
+            final result = await dartRun(
+              [_executable, ...arguments.values],
+              experiments: _experiments,
+              workingDirectory: _workingDirectory,
+              expectedExitCode: _usageExitCode,
+            );
+
+            expect(
+              result.stderr,
+              'Cannot parse the value of "$option" into int, '
+              '"$value" given.\n\n$_helpOutput',
+            );
+          }
+        }
+      });
+    });
+
     group('String', () {
       group('List', () {
         test('skip -> empty', () async {
@@ -669,7 +833,7 @@ stringSetWithDefault: {ghi, jkl} (Set)
           7,
         ),
       );
-      expect(result.stderr, stringContainsNTimes('Error:', 6));
+      expect(result.stderr, stringContainsNTimes('Error:', 7));
     });
 
     test('error_nullable_with_default', () async {

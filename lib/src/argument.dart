@@ -148,10 +148,10 @@ class InvalidTypeArgument extends Argument {
   }
 }
 
-/// A List<String> or Set<String> argument.
-class IterableStringArgument extends ResolvedTypeArgument {
+/// A [List] or [Set] argument.
+abstract class IterableArgument extends ResolvedTypeArgument {
   // ignore: public_member_api_docs
-  IterableStringArgument({
+  IterableArgument({
     required super.intr,
     required super.isValid,
     required super.optionName,
@@ -160,10 +160,37 @@ class IterableStringArgument extends ResolvedTypeArgument {
 
   // ignore: public_member_api_docs
   final IterableType iterableType;
+}
+
+/// A List<String> or Set<String> argument.
+class IterableStringArgument extends IterableArgument {
+  // ignore: public_member_api_docs
+  IterableStringArgument({
+    required super.intr,
+    required super.isValid,
+    required super.iterableType,
+    required super.optionName,
+  });
 
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
     return visitor.visitIterableString(this);
+  }
+}
+
+/// A List<int> or Set<int> argument.
+class IterableIntArgument extends IterableArgument {
+  // ignore: public_member_api_docs
+  IterableIntArgument({
+    required super.intr,
+    required super.isValid,
+    required super.iterableType,
+    required super.optionName,
+  });
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableInt(this);
   }
 }
 

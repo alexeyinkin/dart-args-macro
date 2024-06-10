@@ -18,6 +18,9 @@ abstract class ArgumentVisitor<R> {
   R visitInvalidType(InvalidTypeArgument argument);
 
   // ignore: public_member_api_docs
+  R visitIterableInt(IterableIntArgument argument);
+
+  // ignore: public_member_api_docs
   R visitIterableString(IterableStringArgument argument);
 
   // ignore: public_member_api_docs
