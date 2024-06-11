@@ -1,4 +1,3 @@
-import 'package:matching/matching.dart';
 import 'package:test/test.dart';
 import 'package:test_util/test_util.dart';
 
@@ -124,6 +123,8 @@ const _arguments = {
 const _usageExitCode = 64;
 const _compileErrorExitCode = 254;
 
+typedef E = ExpectedError;
+
 void main() {
   setUp(() async {
     await dartPubGet(workingDirectory: _workingDirectory);
@@ -192,61 +193,24 @@ intSetWithDefault: {8, 9} (Set)
       expect(result.stdout, contains('boolWithDefaultTrue: true (bool)'));
     });
 
-    test('cannot be nullable', () async {
-      final result = await dartRun(
-        ['lib/error_bool_nullable.dart'],
+    test('error_bool', () async {
+      await dartRun(
+        ['lib/error_bool.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_bool.dart', [
+            E('Boolean cannot be nullable.', [10, 12, 13]),
+            E('Boolean must have a default value.', [8, 10]),
+            E(
+              'A field with an initializer cannot be final '
+              'because it needs to be overwritten when parsing the argument.',
+              [13],
+            ),
+          ]),
+        ],
       );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes('Boolean cannot be nullable.', 1),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes('Boolean must have a default value.', 1),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 2));
-    });
-
-    test('cannot be nullable with default', () async {
-      final result = await dartRun(
-        ['lib/error_bool_nullable_default.dart'],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-        expectedExitCode: _compileErrorExitCode,
-      );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes('Boolean cannot be nullable.', 2),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A field with an initializer cannot be final '
-          'because it needs to be overwritten when parsing the argument.',
-          1,
-        ),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 3));
-    });
-
-    test('cannot be non-nullable required without default', () async {
-      final result = await dartRun(
-        ['lib/error_bool_nonnullable_required_without_default.dart'],
-        experiments: _experiments,
-        workingDirectory: _workingDirectory,
-        expectedExitCode: _compileErrorExitCode,
-      );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes('Boolean must have a default value.', 1),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 1));
     });
   });
 
@@ -694,30 +658,26 @@ intSetWithDefault: {8, 9} (Set)
 
     group('Generic', () {
       test('error_iterable_nullable', () async {
-        final result = await dartRun(
+        await dartRun(
           ['lib/error_iterable_nullable.dart'],
           experiments: _experiments,
           workingDirectory: _workingDirectory,
           expectedExitCode: _compileErrorExitCode,
+          expectedErrors: const [
+            ExpectedFileErrors('lib/error_iterable_nullable.dart', [
+              E(
+                'A List cannot be nullable because it is just empty '
+                'when no options with this name are passed.',
+                [7],
+              ),
+              E(
+                'A Set cannot be nullable because it is just empty '
+                'when no options with this name are passed.',
+                [8],
+              ),
+            ]),
+          ],
         );
-
-        expect(
-          result.stderr,
-          stringContainsNTimes(
-            'A List cannot be nullable because it is just empty '
-            'when no options with this name are passed.',
-            1,
-          ),
-        );
-        expect(
-          result.stderr,
-          stringContainsNTimes(
-            'A Set cannot be nullable because it is just empty '
-            'when no options with this name are passed.',
-            1,
-          ),
-        );
-        expect(result.stderr, stringContainsNTimes('Error:', 2));
       });
     });
   });
@@ -772,108 +732,84 @@ intSetWithDefault: {8, 9} (Set)
 
   group('General errors.', () {
     test('error_types', () async {
-      final result = await dartRun(
+      await dartRun(
         ['lib/error_types.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_types.dart', [
+            E(
+              'The only allowed types are: String, int, double, bool, Enum, '
+              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
+              [14, 17, 18, 20],
+            ),
+            E('Expected 0 type arguments.', [17]),
+            E('Cannot resolve type.', [17]),
+            E(
+              'A List requires a type parameter: '
+              'List<String>, List<int>, List<double>, '
+              'List<bool>, List<Enum>.',
+              [15, 16],
+            ),
+            E(
+              'A Set requires a type parameter: '
+              'Set<String>, Set<int>, Set<double>, '
+              'Set<bool>, Set<Enum>.',
+              [19],
+            ),
+          ]),
+        ],
       );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'The only allowed types are: String, int, double, bool, Enum, '
-          'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
-          'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
-          4,
-        ),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes('Expected 0 type arguments.', 1),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes('Cannot resolve type.', 1),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A List requires a type parameter: '
-          'List<String>, List<int>, List<double>, '
-          'List<bool>, List<Enum>.',
-          2,
-        ),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A Set requires a type parameter: '
-          'Set<String>, Set<int>, Set<double>, '
-          'Set<bool>, Set<Enum>.',
-          1,
-        ),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 9));
     });
 
     test('error_final_with_default', () async {
-      final result = await dartRun(
+      await dartRun(
         ['lib/error_final_with_default.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_final_with_default.dart', [
+            E(
+              'A field with an initializer cannot be final '
+              'because it needs to be overwritten when parsing the argument.',
+              [6, 7, 8, 9, 10, 11, 12],
+            ),
+          ]),
+        ],
       );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A field with an initializer cannot be final '
-          'because it needs to be overwritten when parsing the argument.',
-          7,
-        ),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 7));
     });
 
     test('error_nullable_with_default', () async {
-      final result = await dartRun(
+      await dartRun(
         ['lib/error_nullable_with_default.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_nullable_with_default.dart', [
+            E(
+              'A field with an initializer must be non-nullable '
+              'because nullability and the default value '
+              'are mutually exclusive ways to handle a missing value.',
+              [10, 11, 12, 15],
+            ),
+            E('Boolean cannot be nullable.', [9]),
+            E(
+              'A List cannot be nullable because it is just empty '
+              'when no options with this name are passed.',
+              [13],
+            ),
+            E(
+              'A Set cannot be nullable because it is just empty '
+              'when no options with this name are passed.',
+              [14],
+            ),
+          ]),
+        ],
       );
-
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A field with an initializer must be non-nullable '
-          'because nullability and the default value '
-          'are mutually exclusive ways to handle a missing value.',
-          4,
-        ),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes('Boolean cannot be nullable.', 1),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A List cannot be nullable because it is just empty '
-          'when no options with this name are passed.',
-          1,
-        ),
-      );
-      expect(
-        result.stderr,
-        stringContainsNTimes(
-          'A Set cannot be nullable because it is just empty '
-          'when no options with this name are passed.',
-          1,
-        ),
-      );
-      expect(result.stderr, stringContainsNTimes('Error:', 7));
     });
   });
 }

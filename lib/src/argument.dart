@@ -128,7 +128,9 @@ class InvalidTypeArgument extends Argument {
   // ignore: public_member_api_docs
   InvalidTypeArgument({
     required super.intr,
-  }) : super(optionName: '',);
+  }) : super(
+          optionName: '',
+        );
 
   @override
   bool get isValid => false;

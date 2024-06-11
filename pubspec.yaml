@@ -21,7 +21,7 @@ dev_dependencies:
   matching: ^0.1.3
   show_augmentation: ^0.1.0-7.dev
   test: ^1.25.5
-  test_util: ^0.1.0
+  test_util: ^0.1.1
   total_lints: ^3.4.0
 
 #dependency_overrides:

@@ -2,13 +2,14 @@ import 'package:args_macro/args_macro.dart';
 
 @Args()
 class MyArgs {
-  final bool b = false;
-  final double d = 1.0;
-  final MyEnum e = MyEnum.a;
-  final int n = 1;
-  final List<String> listStr = ['aaa'];
-  final Set<String> setStr = {'bbb'};
-  final String str = 'abc';
+  // A field with an initializer cannot be final ↓
+  final bool b = false; //                       1
+  final double d = 1.0; //                       2
+  final MyEnum e = MyEnum.a; //                  3
+  final int n = 1; //                            4
+  final List<String> listStr = ['aaa']; //       5
+  final Set<String> setStr = {'bbb'}; //         6
+  final String str = 'abc'; //                   7
 }
 
 enum MyEnum {
