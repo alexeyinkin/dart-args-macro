@@ -13,7 +13,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   // ignore: public_member_api_docs
   AddOptionsGenerator(this.intr);
 
-  // ignore: public_member_api_docs
+  @override
   final IntrospectionData intr;
 
   // ignore: public_member_api_docs
@@ -36,6 +36,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       'parser.addFlag(\n',
       '  ${argument.flagNameGetter},\n',
       '  negatable: false,\n',
+      ..._getHelpMessageIfAny(argument).indent(),
       ');\n',
     ];
   }
@@ -64,6 +65,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         ',\n',
       ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
+      ..._getHelpMessageIfAny(argument).indent(),
       ');\n',
     ];
   }
@@ -76,6 +78,10 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   List<Object> visitInvalidType(InvalidTypeArgument argument) {
     return const [];
   }
+
+  @override
+  List<Object> visitIterableDouble(IterableDoubleArgument argument) =>
+      _visitIterableStringIntDouble(argument);
 
   @override
   List<Object> visitIterableInt(IterableIntArgument argument) =>
@@ -105,6 +111,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         ',\n',
       ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
+      ..._getHelpMessageIfAny(argument).indent(),
       ');\n',
     ];
   }
@@ -124,7 +131,24 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         '.map((e) => e.toString())',
         ',\n',
       ],
+      ..._getHelpMessageIfAny(argument).indent(),
       ');\n',
+    ];
+  }
+
+  List<Object> _getHelpMessageIfAny(Argument argument) {
+    final helpFieldName = '_${argument.intr.name}Help';
+    final helpField = intr.fields[helpFieldName];
+
+    if (helpField == null || !helpField.fieldDeclaration.hasStatic) {
+      return const [];
+    }
+
+    return [
+      'help: ',
+      intr.clazz.identifier.name,
+      '.',
+      helpFieldName,
     ];
   }
 }

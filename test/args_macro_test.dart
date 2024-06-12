@@ -9,28 +9,34 @@ final _helpOutput = '''
 The command description.
 
 Usage: executable_name [arguments]
-    --required-string (mandatory)   ⎵
+    --required-string (mandatory)    Help for the required string.
     --optional-string               ⎵
     --string-with-default            (defaults to "My default string.")
     --required-int (mandatory)      ⎵
-    --optional-int                  ⎵
+    --optional-int                   Help for the optional int.
     --int-with-default               (defaults to "7")
-    --required-double (mandatory)   ⎵
+    --required-double (mandatory)    Help for the required double.
     --optional-double               ⎵
     --double-with-default            (defaults to "7.77")
-    --bool-with-default-false       ⎵
+    --bool-with-default-false        Help for the flag.
     --no-bool-with-default-true     ⎵
     --required-enum (mandatory)      [apple, banana, mango, orange]
-    --optional-enum                  [apple, banana, mango, orange]
+    --optional-enum                  Help for the optional Enum.
+                                     [apple, banana, mango, orange]
     --enum-with-default              [apple, banana, mango (default), orange]
     --string-list                   ⎵
-    --string-list-with-default       (defaults to "Huey", "Dewey", "Louie")
-    --int-list                      ⎵
+    --string-list-with-default       Help for String[] with default.
+                                     (defaults to "Huey", "Dewey", "Louie")
+    --int-list                       Help for int[].
     --int-list-with-default          (defaults to "1", "2")
-    --string-set                    ⎵
+    --double-list                    Help for double[].
+    --double-list-with-default       (defaults to "1.0", "2.0")
+    --string-set                     Help for String{}.
     --string-set-with-default        (defaults to "Huey", "Dewey", "Louie")
-    --int-set                       ⎵
+    --int-set                        Help for int{}.
     --int-set-with-default           (defaults to "3", "4")
+    --double-set                     Help for double{}.
+    --double-set-with-default        (defaults to "3.0", "4.0")
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
@@ -60,11 +66,17 @@ const _stringListWithDefault = 'string-list-with-default';
 const _intList = 'int-list';
 const _intListWithDefault = 'int-list-with-default';
 
+const _doubleList = 'double-list';
+const _doubleListWithDefault = 'double-list-with-default';
+
 const _stringSet = 'string-set';
 const _stringSetWithDefault = 'string-set-with-default';
 
 const _intSet = 'int-set';
 const _intSetWithDefault = 'int-set-with-default';
+
+const _doubleSet = 'double-set';
+const _doubleSetWithDefault = 'double-set-with-default';
 
 const _arguments = {
   //
@@ -103,6 +115,14 @@ const _arguments = {
   '$_intListWithDefault-2': '--$_intListWithDefault=7',
   '$_intListWithDefault-3': '--$_intListWithDefault=7',
 
+  '$_doubleList-1': '--$_doubleList=-1.0',
+  '$_doubleList-2': '--$_doubleList=-2',
+  '$_doubleList-3': '--$_doubleList=-2.0',
+
+  '$_doubleListWithDefault-1': '--$_doubleListWithDefault=6.1',
+  '$_doubleListWithDefault-2': '--$_doubleListWithDefault=7.1',
+  '$_doubleListWithDefault-3': '--$_doubleListWithDefault=7.2',
+
   '$_stringSet-1': '--$_stringSet=abc',
   '$_stringSet-2': '--$_stringSet=def',
   '$_stringSet-3': '--$_stringSet=def',
@@ -118,6 +138,14 @@ const _arguments = {
   '$_intSetWithDefault-1': '--$_intSetWithDefault=8',
   '$_intSetWithDefault-2': '--$_intSetWithDefault=8',
   '$_intSetWithDefault-3': '--$_intSetWithDefault=9',
+
+  '$_doubleSet-1': '--$_doubleSet=-3.0',
+  '$_doubleSet-2': '--$_doubleSet=-4',
+  '$_doubleSet-3': '--$_doubleSet=-4.0',
+
+  '$_doubleSetWithDefault-1': '--$_doubleSetWithDefault=8.1',
+  '$_doubleSetWithDefault-2': '--$_doubleSetWithDefault=8.2',
+  '$_doubleSetWithDefault-3': '--$_doubleSetWithDefault=9.1',
 };
 
 const _usageExitCode = 64;
@@ -156,10 +184,14 @@ stringList: [abc, def, def] (List)
 stringListWithDefault: [ghi, jkl, jkl] (List)
 intList: [-1, -2, -2] (List)
 intListWithDefault: [6, 7, 7] (List)
+doubleList: [-1.0, -2.0, -2.0] (List)
+doubleListWithDefault: [6.1, 7.1, 7.2] (List)
 stringSet: {abc, def} (Set)
 stringSetWithDefault: {ghi, jkl} (Set)
 intSet: {-3, -4} (Set)
 intSetWithDefault: {8, 9} (Set)
+doubleSet: {-3.0, -4.0} (Set)
+doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
 ''');
   });
 
@@ -422,6 +454,140 @@ intSetWithDefault: {8, 9} (Set)
   });
 
   group('Iterable', () {
+    group('double', () {
+      group('List', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleList-1');
+          arguments.remove('$_doubleList-2');
+          arguments.remove('$_doubleList-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('doubleList: [] (List)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleListWithDefault-1');
+          arguments.remove('$_doubleListWithDefault-2');
+          arguments.remove('$_doubleListWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('doubleListWithDefault: [1.0, 2.0] (List)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleList-1');
+          arguments.remove('$_doubleList-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('doubleList: [-2.0] (List)'));
+        });
+      });
+
+      group('Set', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleSet-1');
+          arguments.remove('$_doubleSet-2');
+          arguments.remove('$_doubleSet-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('doubleSet: {} (Set)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleSetWithDefault-1');
+          arguments.remove('$_doubleSetWithDefault-2');
+          arguments.remove('$_doubleSetWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('doubleSetWithDefault: {3.0, 4.0} (Set)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_doubleSet-1');
+          arguments.remove('$_doubleSet-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('doubleSet: {-4.0} (Set)'));
+        });
+      });
+
+      test('parse error', () async {
+        const options = [
+          _doubleList,
+          _doubleListWithDefault,
+          _doubleSet,
+          _doubleSetWithDefault,
+        ];
+        const values = ['', 'abc'];
+
+        for (final option in options) {
+          for (final value in values) {
+            final arguments = {
+              ..._arguments,
+              '$option-1': '--$option=1',
+              '$option-2': '--$option=$value',
+              '$option-3': '--$option=3.0',
+            };
+
+            final result = await dartRun(
+              [_executable, ...arguments.values],
+              experiments: _experiments,
+              workingDirectory: _workingDirectory,
+              expectedExitCode: _usageExitCode,
+            );
+
+            expect(
+              result.stderr,
+              'Cannot parse the value of "$option" into double, '
+              '"$value" given.\n\n$_helpOutput',
+            );
+          }
+        }
+      });
+    });
+
     group('int', () {
       group('List', () {
         test('skip -> empty', () async {
@@ -731,33 +897,88 @@ intSetWithDefault: {8, 9} (Set)
   });
 
   group('General errors.', () {
-    test('error_types', () async {
+    test('error_names', () async {
       await dartRun(
-        ['lib/error_types.dart'],
+        ['lib/error_names.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
         expectedErrors: const [
-          ExpectedFileErrors('lib/error_types.dart', [
+          ExpectedFileErrors('lib/error_names.dart', [
+            E('An argument field name cannot contain an underscore.', [8, 9]),
+          ]),
+        ],
+      );
+    });
+
+    test('error_types_list', () async {
+      await dartRun(
+        ['lib/error_types_list.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_types_list.dart', [
             E(
               'The only allowed types are: String, int, double, bool, Enum, '
               'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
               'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
-              [14, 17, 18, 20],
+              [15, 16, 17],
             ),
-            E('Expected 0 type arguments.', [17]),
-            E('Cannot resolve type.', [17]),
+            E('Expected 0 type arguments.', [15]),
+            E('Cannot resolve type.', [15]),
             E(
               'A List requires a type parameter: '
               'List<String>, List<int>, List<double>, '
               'List<bool>, List<Enum>.',
-              [15, 16],
+              [13, 14],
             ),
+          ]),
+        ],
+      );
+    });
+
+    test('error_types_set', () async {
+      await dartRun(
+        ['lib/error_types_set.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_types_set.dart', [
+            E(
+              'The only allowed types are: String, int, double, bool, Enum, '
+              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
+              [15, 16, 17],
+            ),
+            E('Expected 0 type arguments.', [15]),
+            E('Cannot resolve type.', [15]),
             E(
               'A Set requires a type parameter: '
               'Set<String>, Set<int>, Set<double>, '
               'Set<bool>, Set<Enum>.',
-              [19],
+              [13, 14],
+            ),
+          ]),
+        ],
+      );
+    });
+
+    test('error_types_other', () async {
+      await dartRun(
+        ['lib/error_types_other.dart'],
+        experiments: _experiments,
+        workingDirectory: _workingDirectory,
+        expectedExitCode: _compileErrorExitCode,
+        expectedErrors: const [
+          ExpectedFileErrors('lib/error_types_other.dart', [
+            E('An explicitly declared type is required here.', [9, 10]),
+            E(
+              'The only allowed types are: String, int, double, bool, Enum, '
+              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
+              [11, 12, 13, 14],
             ),
           ]),
         ],
@@ -765,48 +986,70 @@ intSetWithDefault: {8, 9} (Set)
     });
 
     test('error_final_with_default', () async {
+      // This is split in 2 files because the compiler limits errors to 10.
+      const files = {
+        'iterable': [6, 7, 8, 9, 10, 11],
+        'scalar': [6, 7, 8, 9, 10],
+      };
+
+      for (final entry in files.entries) {
+        final fileName = 'lib/error_final_with_default_${entry.key}.dart';
+        await dartRun(
+          [fileName],
+          experiments: _experiments,
+          workingDirectory: _workingDirectory,
+          expectedExitCode: _compileErrorExitCode,
+          expectedErrors: [
+            ExpectedFileErrors(fileName, [
+              E(
+                'A field with an initializer cannot be final '
+                'because it needs to be overwritten when parsing the argument.',
+                entry.value,
+              ),
+            ]),
+          ],
+        );
+      }
+    });
+
+    test('error_nullable_with_default_iterable', () async {
       await dartRun(
-        ['lib/error_final_with_default.dart'],
+        ['lib/error_nullable_with_default_iterable.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
         expectedErrors: const [
-          ExpectedFileErrors('lib/error_final_with_default.dart', [
+          ExpectedFileErrors('lib/error_nullable_with_default_iterable.dart', [
             E(
-              'A field with an initializer cannot be final '
-              'because it needs to be overwritten when parsing the argument.',
-              [6, 7, 8, 9, 10, 11, 12],
+              'A List cannot be nullable because it is just empty '
+              'when no options with this name are passed.',
+              [7, 8, 9],
+            ),
+            E(
+              'A Set cannot be nullable because it is just empty '
+              'when no options with this name are passed.',
+              [10, 11, 12],
             ),
           ]),
         ],
       );
     });
 
-    test('error_nullable_with_default', () async {
+    test('error_nullable_with_default_scalar', () async {
       await dartRun(
-        ['lib/error_nullable_with_default.dart'],
+        ['lib/error_nullable_with_default_scalar.dart'],
         experiments: _experiments,
         workingDirectory: _workingDirectory,
         expectedExitCode: _compileErrorExitCode,
         expectedErrors: const [
-          ExpectedFileErrors('lib/error_nullable_with_default.dart', [
+          ExpectedFileErrors('lib/error_nullable_with_default_scalar.dart', [
             E(
               'A field with an initializer must be non-nullable '
               'because nullability and the default value '
               'are mutually exclusive ways to handle a missing value.',
-              [10, 11, 12, 15],
+              [8, 9, 10, 11],
             ),
-            E('Boolean cannot be nullable.', [9]),
-            E(
-              'A List cannot be nullable because it is just empty '
-              'when no options with this name are passed.',
-              [13],
-            ),
-            E(
-              'A Set cannot be nullable because it is just empty '
-              'when no options with this name are passed.',
-              [14],
-            ),
+            E('Boolean cannot be nullable.', [7]),
           ]),
         ],
       );

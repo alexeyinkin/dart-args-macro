@@ -7,22 +7,21 @@ import '../argument.dart';
 import '../identifiers.dart';
 import '../introspection_data.dart';
 import 'mock_data_object_generator.dart';
+import 'positional_param_generator.dart';
 import 'visitor.dart';
 
 /// Generates the code that parses option values into the data class instance.
-class ParseGenerator extends ArgumentVisitor<List<Object>> {
+class ParseGenerator extends ArgumentVisitor<List<Object>>
+    with PositionalParamGenerator {
   // ignore: public_member_api_docs
-  ParseGenerator(this.clazz, this.intr);
+  ParseGenerator(this.intr);
 
-  // ignore: public_member_api_docs
-  final ClassDeclaration clazz;
-
-  // ignore: public_member_api_docs
+  @override
   final IntrospectionData intr;
 
   // ignore: public_member_api_docs
   List<Object> generate() {
-    final name = clazz.identifier.name;
+    final name = intr.clazz.identifier.name;
     final c = intr.codes;
 
     final arguments =
@@ -34,6 +33,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       '  try {\n',
       '    final wrapped = _parseWrapped(argv);\n',
       '    return $name(\n',
+      for (final param in getPositionalParams()) ...[...param, ',\n'].indent(6),
       for (final argument in arguments)
         ...[...argument.accept(this), ',\n'].indent(6),
       '    );\n',
@@ -98,6 +98,13 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitIterableDouble(IterableDoubleArgument argument) =>
+      _visitIterableIntDouble(
+        argument,
+        intr.codes.double,
+      );
+
+  @override
   List<Object> visitIterableInt(IterableIntArgument argument) =>
       _visitIterableIntDouble(
         argument,
@@ -158,7 +165,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   List<Object> _visitIterableIntDouble(
-    IterableIntArgument argument,
+    IterableArgument argument,
     NamedTypeAnnotationCode typeCode,
   ) {
     final valueGetter = _getMultiOptionValueGetter(argument);
@@ -166,7 +173,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     final result = [
       //
       argument.intr.name,
-      ': $valueGetter.map((e) => ', intr.codes.int, '.tryParse(e) ?? (throw ',
+      ': $valueGetter.map((e) => ', typeCode, '.tryParse(e) ?? (throw ',
       intr.codes.ArgumentError,
       '.value(\n',
       '  $valueGetter,\n',

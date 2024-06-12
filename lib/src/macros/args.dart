@@ -60,7 +60,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
 
     await _declareConstructors(clazz, builder);
     _declareToDebugString(builder, intr);
-    _augmentParser(clazz, builder, intr);
+    _augmentParser(builder, intr);
   }
 
   Future<void> _declareConstructors(
@@ -86,11 +86,10 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   }
 
   void _augmentParser(
-    ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
     IntrospectionData intr,
   ) {
-    final parserName = _getParserName(clazz);
+    final parserName = _getParserName(intr.clazz);
 
     builder.declareInLibrary(
       DeclarationCode.fromParts([
@@ -98,11 +97,11 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         'augment class $parserName {\n',
         '  final parser = ', intr.codes.ArgParser, '();\n',
         '  static ${Identifiers.silenceUninitializedError}() {}\n',
-        ...MockDataObjectGenerator(clazz, intr).generate().indent(),
-        ..._getConstructor(clazz).indent(),
+        ...MockDataObjectGenerator(intr).generate().indent(),
+        ..._getConstructor(intr.clazz).indent(),
         ...AddOptionsGenerator(intr).generate().indent(),
         ..._getAddHelpFlag().indent(),
-        ...ParseGenerator(clazz, intr).generate().indent(),
+        ...ParseGenerator(intr).generate().indent(),
         ..._getParseWrapped(intr).indent(),
         ..._getPrintUsage(intr).indent(),
         '}\n',
@@ -237,8 +236,10 @@ Future<IntrospectionData> _introspect(
   );
 
   return IntrospectionData(
-    codes: codes,
     arguments: arguments,
+    clazz: clazz,
+    codes: codes,
+    fields: fields,
     staticTypes: staticTypes,
   );
 }
@@ -270,9 +271,33 @@ Future<Argument?> _fieldToArgument(
   required StaticTypes staticTypes,
 }) async {
   final field = fieldIntr.fieldDeclaration;
+
+  if (field.hasStatic) {
+    return null;
+  }
+
   final target = field.asDiagnosticTarget;
 
+  if (fieldIntr.name.contains('_')) {
+    builder.reportError(
+      'An argument field name cannot contain an underscore.',
+      target: target,
+    );
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
+  final type = field.type;
+
   void unsupportedType() {
+    if (type is OmittedTypeAnnotation) {
+      // TODO(alexeyinkin): Allow inferring types, https://github.com/alexeyinkin/dart-args-macro/issues/1
+      builder.reportError(
+        'An explicitly declared type is required here.',
+        target: target,
+      );
+      return;
+    }
+
     builder.reportError(
       'The only allowed types are: String, int, double, bool, Enum, '
       'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
@@ -286,7 +311,6 @@ Future<Argument?> _fieldToArgument(
     return InvalidTypeArgument(intr: fieldIntr);
   }
 
-  final type = field.type;
   final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
 
@@ -341,13 +365,8 @@ Future<Argument?> _fieldToArgument(
       );
     }
 
-    builder.reportError(
-      'An argument class can only have fields of core types, '
-      '${fieldIntr.unaliasedTypeDeclaration.identifier.name} given.',
-      target: target,
-    );
-
-    return null; // TODO: Test a custom class.
+    unsupportedType();
+    return InvalidTypeArgument(intr: fieldIntr);
   }
 
   final typeName = typeDecl.identifier.name;
@@ -441,6 +460,13 @@ Future<Argument?> _fieldToArgument(
       }
 
       switch (paramTypeDecl.identifier.name) {
+        case 'double':
+          return IterableDoubleArgument(
+            intr: fieldIntr,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+
         case 'int':
           return IterableIntArgument(
             intr: fieldIntr,

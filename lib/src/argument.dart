@@ -136,6 +136,10 @@ class InvalidTypeArgument extends Argument {
   bool get isValid => false;
 
   @override
+  bool get isInConstructor =>
+      super.isInConstructor && !intr.name.startsWith('_');
+
+  @override
   R accept<R>(ArgumentVisitor<R> visitor) {
     return visitor.visitInvalidType(this);
   }
@@ -154,10 +158,10 @@ abstract class IterableArgument extends ResolvedTypeArgument {
   final IterableType iterableType;
 }
 
-/// A List<String> or Set<String> argument.
-class IterableStringArgument extends IterableArgument {
+/// A List<double> or Set<double> argument.
+class IterableDoubleArgument extends IterableArgument {
   // ignore: public_member_api_docs
-  IterableStringArgument({
+  IterableDoubleArgument({
     required super.intr,
     required super.iterableType,
     required super.optionName,
@@ -165,7 +169,7 @@ class IterableStringArgument extends IterableArgument {
 
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
-    return visitor.visitIterableString(this);
+    return visitor.visitIterableDouble(this);
   }
 }
 
@@ -181,6 +185,21 @@ class IterableIntArgument extends IterableArgument {
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
     return visitor.visitIterableInt(this);
+  }
+}
+
+/// A List<String> or Set<String> argument.
+class IterableStringArgument extends IterableArgument {
+  // ignore: public_member_api_docs
+  IterableStringArgument({
+    required super.intr,
+    required super.iterableType,
+    required super.optionName,
+  });
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableString(this);
   }
 }
 

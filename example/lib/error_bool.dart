@@ -5,12 +5,12 @@ class MyArgs {
   //             A field with an initializer cannot be final ↓
   //               Boolean must have a default value. ↓
   //               Boolean cannot be nullable. ↓
-  final bool requiredBool; //                         1
+  final bool requiredBool; //                         *
 
-  final bool? finalNullableBool; //            1      2
+  final bool? finalNullableBool; //            *      *
 
-  bool? nullableBoolInit = null; //            2
-  final bool? finalNullableBoolInit = null; // 3             1
+  bool? nullableBoolInit = null; //            *
+  final bool? finalNullableBoolInit = null; // *             *
 }
 
 void main() {}

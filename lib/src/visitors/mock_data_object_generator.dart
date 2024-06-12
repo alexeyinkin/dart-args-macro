@@ -5,6 +5,7 @@ import 'package:macros/macros.dart';
 import '../argument.dart';
 import '../identifiers.dart';
 import '../introspection_data.dart';
+import 'positional_param_generator.dart';
 import 'visitor.dart';
 
 const _constructorName = 'withDefaults';
@@ -18,14 +19,12 @@ const _constructorName = 'withDefaults';
 /// The required fields are filled with dummy values of the respective types
 /// since they will never be used because the actual values for them
 /// will be parsed when constructing the end-instance of the data class.
-class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
+class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
+    with PositionalParamGenerator {
   // ignore: public_member_api_docs
-  MockDataObjectGenerator(this.clazz, this.intr);
+  MockDataObjectGenerator(this.intr);
 
-  // ignore: public_member_api_docs
-  final ClassDeclaration clazz;
-
-  // ignore: public_member_api_docs
+  @override
   final IntrospectionData intr;
 
   // ignore: public_member_api_docs
@@ -46,12 +45,14 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
 
   // ignore: public_member_api_docs
   List<Object> generate() {
-    final name = clazz.identifier.name;
-    final arguments = intr.arguments.arguments.values
-        .where((a) => !a.intr.fieldDeclaration.hasInitializer);
+    final name = intr.clazz.identifier.name;
+    final arguments = intr.arguments.arguments.values.where(
+      (a) => a.isInConstructor && !a.intr.fieldDeclaration.hasInitializer,
+    );
 
     return [
       'late final $fieldName = $name.$_constructorName(\n',
+      for (final param in getPositionalParams()) ...[...param, ',\n'].indent(),
       for (final parts in arguments.map((argument) => argument.accept(this)))
         ...[...parts, ',\n'].indent(),
       ');\n',
@@ -104,6 +105,10 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>> {
       '()',
     ];
   }
+
+  @override
+  List<Object> visitIterableDouble(IterableDoubleArgument argument) =>
+      _visitIterable(argument);
 
   @override
   List<Object> visitIterableInt(IterableIntArgument argument) =>
