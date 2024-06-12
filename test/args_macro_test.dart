@@ -31,12 +31,18 @@ Usage: executable_name [arguments]
     --int-list-with-default          (defaults to "1", "2")
     --double-list                    Help for double[].
     --double-list-with-default       (defaults to "1.0", "2.0")
+    --enum-list                      Help for Enum[].
+                                     [apple, banana, mango, orange]
+    --enum-list-with-default         [apple (default), banana (default), mango, orange]
     --string-set                     Help for String{}.
     --string-set-with-default        (defaults to "Huey", "Dewey", "Louie")
     --int-set                        Help for int{}.
     --int-set-with-default           (defaults to "3", "4")
     --double-set                     Help for double{}.
     --double-set-with-default        (defaults to "3.0", "4.0")
+    --enum-set                       Help for Enum{}.
+                                     [apple, banana, mango, orange]
+    --enum-set-with-default          [apple, banana (default), mango, orange (default)]
 -h, --help                           Print this usage information.
 '''
     .replaceAll('⎵', ' ');
@@ -69,6 +75,9 @@ const _intListWithDefault = 'int-list-with-default';
 const _doubleList = 'double-list';
 const _doubleListWithDefault = 'double-list-with-default';
 
+const _enumList = 'enum-list';
+const _enumListWithDefault = 'enum-list-with-default';
+
 const _stringSet = 'string-set';
 const _stringSetWithDefault = 'string-set-with-default';
 
@@ -77,6 +86,9 @@ const _intSetWithDefault = 'int-set-with-default';
 
 const _doubleSet = 'double-set';
 const _doubleSetWithDefault = 'double-set-with-default';
+
+const _enumSet = 'enum-set';
+const _enumSetWithDefault = 'enum-set-with-default';
 
 const _arguments = {
   //
@@ -123,6 +135,14 @@ const _arguments = {
   '$_doubleListWithDefault-2': '--$_doubleListWithDefault=7.1',
   '$_doubleListWithDefault-3': '--$_doubleListWithDefault=7.2',
 
+  '$_enumList-1': '--$_enumList=apple',
+  '$_enumList-2': '--$_enumList=banana',
+  '$_enumList-3': '--$_enumList=banana',
+
+  '$_enumListWithDefault-1': '--$_enumListWithDefault=banana',
+  '$_enumListWithDefault-2': '--$_enumListWithDefault=mango',
+  '$_enumListWithDefault-3': '--$_enumListWithDefault=mango',
+
   '$_stringSet-1': '--$_stringSet=abc',
   '$_stringSet-2': '--$_stringSet=def',
   '$_stringSet-3': '--$_stringSet=def',
@@ -146,6 +166,14 @@ const _arguments = {
   '$_doubleSetWithDefault-1': '--$_doubleSetWithDefault=8.1',
   '$_doubleSetWithDefault-2': '--$_doubleSetWithDefault=8.2',
   '$_doubleSetWithDefault-3': '--$_doubleSetWithDefault=9.1',
+
+  '$_enumSet-1': '--$_enumSet=apple',
+  '$_enumSet-2': '--$_enumSet=banana',
+  '$_enumSet-3': '--$_enumSet=banana',
+
+  '$_enumSetWithDefault-1': '--$_enumSetWithDefault=banana',
+  '$_enumSetWithDefault-2': '--$_enumSetWithDefault=mango',
+  '$_enumSetWithDefault-3': '--$_enumSetWithDefault=mango',
 };
 
 const _usageExitCode = 64;
@@ -186,12 +214,16 @@ intList: [-1, -2, -2] (List)
 intListWithDefault: [6, 7, 7] (List)
 doubleList: [-1.0, -2.0, -2.0] (List)
 doubleListWithDefault: [6.1, 7.1, 7.2] (List)
+enumList: [Fruit.apple, Fruit.banana, Fruit.banana] (List)
+enumListWithDefault: [Fruit.banana, Fruit.mango, Fruit.mango] (List)
 stringSet: {abc, def} (Set)
 stringSetWithDefault: {ghi, jkl} (Set)
 intSet: {-3, -4} (Set)
 intSetWithDefault: {8, 9} (Set)
 doubleSet: {-3.0, -4.0} (Set)
 doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
+enumSet: {Fruit.apple, Fruit.banana} (Set)
+enumSetWithDefault: {Fruit.banana, Fruit.mango} (Set)
 ''');
   });
 
@@ -588,6 +620,140 @@ doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
       });
     });
 
+    group('Enum', () {
+      group('List', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumList-1');
+          arguments.remove('$_enumList-2');
+          arguments.remove('$_enumList-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('enumList: [] (List)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumListWithDefault-1');
+          arguments.remove('$_enumListWithDefault-2');
+          arguments.remove('$_enumListWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('enumListWithDefault: [Fruit.apple, Fruit.banana] (List)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumList-1');
+          arguments.remove('$_enumList-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('enumList: [Fruit.banana] (List)'));
+        });
+      });
+
+      group('Set', () {
+        test('skip -> empty', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumSet-1');
+          arguments.remove('$_enumSet-2');
+          arguments.remove('$_enumSet-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('enumSet: {} (Set)'));
+        });
+
+        test('skip with initializer -> default', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumSetWithDefault-1');
+          arguments.remove('$_enumSetWithDefault-2');
+          arguments.remove('$_enumSetWithDefault-3');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(
+            result.stdout,
+            contains('enumSetWithDefault: {Fruit.orange, Fruit.banana} (Set)'),
+          );
+        });
+
+        test('1', () async {
+          final arguments = {..._arguments};
+          arguments.remove('$_enumSet-1');
+          arguments.remove('$_enumSet-2');
+
+          final result = await dartRun(
+            [_executable, ...arguments.values],
+            experiments: _experiments,
+            workingDirectory: _workingDirectory,
+          );
+
+          expect(result.stdout, contains('enumSet: {Fruit.banana} (Set)'));
+        });
+      });
+
+      test('parse error', () async {
+        const options = [
+          _enumList,
+          _enumListWithDefault,
+          _enumSet,
+          _enumSetWithDefault,
+        ];
+        const values = ['', 'abc'];
+
+        for (final option in options) {
+          for (final value in values) {
+            final arguments = {
+              ..._arguments,
+              '$option-1': '--$option=apple',
+              '$option-2': '--$option=$value',
+              '$option-3': '--$option=mango',
+            };
+
+            final result = await dartRun(
+              [_executable, ...arguments.values],
+              experiments: _experiments,
+              workingDirectory: _workingDirectory,
+              expectedExitCode: _usageExitCode,
+            );
+
+            expect(
+              result.stderr,
+              '"$value" is not an allowed value for option "$option".'
+              '\n\n$_helpOutput',
+            );
+          }
+        }
+      });
+    });
+
     group('int', () {
       group('List', () {
         test('skip -> empty', () async {
@@ -921,17 +1087,22 @@ doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
           ExpectedFileErrors('lib/error_types_list.dart', [
             E(
               'The only allowed types are: String, int, double, bool, Enum, '
-              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
-              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
-              [15, 16, 17],
+              'List<String>, List<int>, List<double>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<Enum>.',
+              [16, 17, 18],
             ),
-            E('Expected 0 type arguments.', [15]),
-            E('Cannot resolve type.', [15]),
+            E(
+              'A List type parameter must be non-nullable because each '
+              'element is either parsed successfully or breaks the execution.',
+              [19, 20],
+            ),
+            E('Expected 0 type arguments.', [16]),
+            E('Cannot resolve type.', [16]),
             E(
               'A List requires a type parameter: '
               'List<String>, List<int>, List<double>, '
-              'List<bool>, List<Enum>.',
-              [13, 14],
+              'List<Enum>.',
+              [14, 15],
             ),
           ]),
         ],
@@ -948,17 +1119,22 @@ doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
           ExpectedFileErrors('lib/error_types_set.dart', [
             E(
               'The only allowed types are: String, int, double, bool, Enum, '
-              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
-              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
-              [15, 16, 17],
+              'List<String>, List<int>, List<double>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<Enum>.',
+              [16, 17, 18],
             ),
-            E('Expected 0 type arguments.', [15]),
-            E('Cannot resolve type.', [15]),
+            E(
+              'A Set type parameter must be non-nullable because each '
+              'element is either parsed successfully or breaks the execution.',
+              [19, 20],
+            ),
+            E('Expected 0 type arguments.', [16]),
+            E('Cannot resolve type.', [16]),
             E(
               'A Set requires a type parameter: '
               'Set<String>, Set<int>, Set<double>, '
-              'Set<bool>, Set<Enum>.',
-              [13, 14],
+              'Set<Enum>.',
+              [14, 15],
             ),
           ]),
         ],
@@ -976,8 +1152,8 @@ doubleSetWithDefault: {8.1, 8.2, 9.1} (Set)
             E('An explicitly declared type is required here.', [9, 10]),
             E(
               'The only allowed types are: String, int, double, bool, Enum, '
-              'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
-              'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
+              'List<String>, List<int>, List<double>, List<Enum>, '
+              'Set<String>, Set<int>, Set<double>, Set<Enum>.',
               [11, 12, 13, 14],
             ),
           ]),

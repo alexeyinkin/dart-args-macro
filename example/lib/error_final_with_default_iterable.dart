@@ -11,8 +11,6 @@ class MyArgs {
   final Set<String> setStr = {'bbb'}; //         *
 }
 
-enum MyEnum {
-  a,
-}
+enum MyEnum { a }
 
 void main() {}

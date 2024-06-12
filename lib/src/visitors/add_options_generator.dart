@@ -84,6 +84,30 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       _visitIterableStringIntDouble(argument);
 
   @override
+  List<Object> visitIterableEnum(IterableEnumArgument argument) {
+    final field = argument.intr.fieldDeclaration;
+    final values =
+        argument.enumIntr.values.map((v) => v.name).toList(growable: false);
+
+    return [
+      //
+      'parser.addMultiOption(\n',
+      '  "${argument.optionName}",\n',
+      '  allowed: ${jsonEncode(values)},\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '.map((e) => e.name)',
+        ',\n',
+      ],
+      ..._getHelpMessageIfAny(argument).indent(),
+      ');\n',
+    ];
+  }
+
+  @override
   List<Object> visitIterableInt(IterableIntArgument argument) =>
       _visitIterableStringIntDouble(argument);
 

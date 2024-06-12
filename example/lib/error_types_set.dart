@@ -6,15 +6,18 @@ typedef StringAlias = String;
 
 @Args()
 class MyArgs {
-  //                                        A Set requires a type parameter ↓
-  //                                             Cannot resolve type. ↓
-  //                                 Expected 0 type arguments. ↓
+  //                               A List type parameter must be non-nullable ↓
+  //                                     A Set requires a type parameter ↓
+  //                                           Cannot resolve type. ↓
+  //                                Expected 0 type arguments. ↓
   //                           The only allowed types are ↓
-  final Set genericSet; //                                                  *
-  final GenericSetAlias genericSetAlias; //                                 *
-  final GenericSetAlias<String> genericSetAliasString; // *     *     *
+  final Set genericSet; //                                               *
+  final GenericSetAlias genericSetAlias; //                              *
+  final GenericSetAlias<String> genericSetAliasString; // *    *    *
   final Set<Map> setMap; //                               *
   final Set<MyClass> setMyClass; //                       *
+  final Set<int?> setNullableInt; //                                          *
+  final Set<MyEnum?> setNullableEnum; //                                      *
 
   // OK.
   final Set<String> setString;
@@ -22,5 +25,7 @@ class MyArgs {
 }
 
 class MyClass {}
+
+enum MyEnum { a }
 
 void main() {}

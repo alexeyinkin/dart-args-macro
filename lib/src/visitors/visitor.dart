@@ -25,6 +25,9 @@ abstract class ArgumentVisitor<R> {
   R visitIterableDouble(IterableDoubleArgument argument);
 
   // ignore: public_member_api_docs
+  R visitIterableEnum(IterableEnumArgument argument);
+
+  // ignore: public_member_api_docs
   R visitIterableInt(IterableIntArgument argument);
 
   // ignore: public_member_api_docs

@@ -11,8 +11,6 @@ class MyArgs {
   String? str = 'abc'; //                             *
 }
 
-enum MyEnum {
-  a,
-}
+enum MyEnum { a }
 
 void main() {}

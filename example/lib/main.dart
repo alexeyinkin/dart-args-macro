@@ -42,6 +42,10 @@ class MyArgs {
   static const _doubleListHelp = 'Help for double[].';
   List<double> doubleListWithDefault = [1, 2.0];
 
+  final List<Fruit> enumList;
+  static const _enumListHelp = 'Help for Enum[].';
+  List<Fruit> enumListWithDefault = [Fruit.apple, Fruit.banana];
+
   final Set<String> stringSet;
   static const _stringSetHelp = 'Help for String{}.';
   Set<String> stringSetWithDefault = {'Huey', 'Dewey', 'Louie'};
@@ -53,6 +57,10 @@ class MyArgs {
   final Set<double> doubleSet;
   static const _doubleSetHelp = 'Help for double{}.';
   Set<double> doubleSetWithDefault = {3, 4.0};
+
+  final Set<Fruit> enumSet;
+  static const _enumSetHelp = 'Help for Enum{}.';
+  Set<Fruit> enumSetWithDefault = {Fruit.orange, Fruit.banana};
 }
 
 enum Fruit { apple, banana, mango, orange }

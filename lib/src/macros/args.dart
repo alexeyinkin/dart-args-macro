@@ -288,21 +288,21 @@ Future<Argument?> _fieldToArgument(
 
   final type = field.type;
 
+  void reportError(String message) {
+    builder.reportError(message, target: target);
+  }
+
   void unsupportedType() {
     if (type is OmittedTypeAnnotation) {
       // TODO(alexeyinkin): Allow inferring types, https://github.com/alexeyinkin/dart-args-macro/issues/1
-      builder.reportError(
-        'An explicitly declared type is required here.',
-        target: target,
-      );
+      reportError('An explicitly declared type is required here.');
       return;
     }
 
-    builder.reportError(
+    reportError(
       'The only allowed types are: String, int, double, bool, Enum, '
-      'List<String>, List<int>, List<double>, List<bool>, List<Enum>, '
-      'Set<String>, Set<int>, Set<double>, Set<bool>, Set<Enum>.',
-      target: target,
+      'List<String>, List<int>, List<double>, List<Enum>, '
+      'Set<String>, Set<int>, Set<double>, Set<Enum>.',
     );
   }
 
@@ -322,10 +322,9 @@ Future<Argument?> _fieldToArgument(
   bool isValid = true;
 
   if (field.hasInitializer && field.hasFinal) {
-    builder.reportError(
+    reportError(
       'A field with an initializer cannot be final '
       'because it needs to be overwritten when parsing the argument.',
-      target: target,
     );
 
     isValid = false;
@@ -340,11 +339,10 @@ Future<Argument?> _fieldToArgument(
 
     default:
       if (field.hasInitializer && type.isNullable) {
-        builder.reportError(
+        reportError(
           'A field with an initializer must be non-nullable '
           'because nullability and the default value '
           'are mutually exclusive ways to handle a missing value.',
-          target: target,
         );
 
         isValid = false;
@@ -358,10 +356,10 @@ Future<Argument?> _fieldToArgument(
 
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
-        intr: fieldIntr,
-        optionName: optionName,
         enumIntr:
             await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
+        intr: fieldIntr,
+        optionName: optionName,
       );
     }
 
@@ -373,20 +371,12 @@ Future<Argument?> _fieldToArgument(
   switch (typeName) {
     case 'bool':
       if (type.isNullable) {
-        builder.reportError(
-          'Boolean cannot be nullable.',
-          target: target,
-        );
-
+        reportError('Boolean cannot be nullable.');
         isValid = false;
       }
 
       if (!field.hasInitializer) {
-        builder.reportError(
-          'Boolean must have a default value.',
-          target: target,
-        );
-
+        reportError('Boolean must have a default value.');
         isValid = false;
       }
 
@@ -422,10 +412,9 @@ Future<Argument?> _fieldToArgument(
     case 'List':
     case 'Set':
       if (type.isNullable) {
-        builder.reportError(
+        reportError(
           'A $typeName cannot be nullable because it is just empty '
           'when no options with this name are passed.',
-          target: target,
         );
 
         isValid = false;
@@ -433,13 +422,25 @@ Future<Argument?> _fieldToArgument(
 
       final paramType = type.typeArguments.firstOrNull;
       if (paramType == null) {
-        builder.reportError(
+        reportError(
           'A $typeName requires a type parameter: '
           '$typeName<String>, $typeName<int>, $typeName<double>, '
-          '$typeName<bool>, $typeName<Enum>.',
-          target: target,
+          '$typeName<Enum>.',
         );
 
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
+      if (paramType.isNullable) {
+        reportError(
+          'A $typeName type parameter must be non-nullable because each '
+          'element is either parsed successfully or breaks the execution.',
+        );
+
+        isValid = false;
+      }
+
+      if (!isValid) {
         return InvalidTypeArgument(intr: fieldIntr);
       }
 
@@ -450,12 +451,19 @@ Future<Argument?> _fieldToArgument(
 
       final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
 
-      // TODO: Enum?
-      // if (paramTypeDecl.library.uri != Libraries.core) {
-      //
-      // }
+      if (paramTypeDecl.library.uri != Libraries.core) {
+        // reportError(field.identifier.name);
+        final paramStaticType = await builder.resolve(paramType.code);
+        if (await paramStaticType.isSubtypeOf(staticTypes.Enum)) {
+          return IterableEnumArgument(
+            enumIntr: await builder.introspectEnum(paramTypeDecl),
+            intr: fieldIntr,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+        }
 
-      if (!isValid) {
+        unsupportedType();
         return InvalidTypeArgument(intr: fieldIntr);
       }
 

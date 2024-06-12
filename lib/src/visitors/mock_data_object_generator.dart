@@ -47,7 +47,11 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
   List<Object> generate() {
     final name = intr.clazz.identifier.name;
     final arguments = intr.arguments.arguments.values.where(
-      (a) => a.isInConstructor && !a.intr.fieldDeclaration.hasInitializer,
+      (a) =>
+          a.intr.constructorOptionality ==
+              FieldConstructorOptionality.required &&
+          a.intr.constructorHandling ==
+              FieldConstructorHandling.namedOrPositional,
     );
 
     return [
@@ -108,6 +112,10 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
 
   @override
   List<Object> visitIterableDouble(IterableDoubleArgument argument) =>
+      _visitIterable(argument);
+
+  @override
+  List<Object> visitIterableEnum(IterableEnumArgument argument) =>
       _visitIterable(argument);
 
   @override

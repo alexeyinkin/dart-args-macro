@@ -23,15 +23,10 @@ sealed class Argument {
   /// to call the type-specific method on the visitor.
   R accept<R>(ArgumentVisitor<R> visitor);
 
-  /// Whether this argument should be passed to the unnamed constructor
-  /// of the data class.
-  bool get isInConstructor =>
-      !intr.fieldDeclaration.hasFinal || !intr.fieldDeclaration.hasInitializer;
-
   /// Whether this argument meets all requirements for its type.
   ///
   /// If any argument is not [isValid], the program will not build.
-  /// An invalid argument may still be [isInConstructor].
+  /// An invalid argument may still be in constructor.
   bool get isValid => true;
 }
 
@@ -136,10 +131,6 @@ class InvalidTypeArgument extends Argument {
   bool get isValid => false;
 
   @override
-  bool get isInConstructor =>
-      super.isInConstructor && !intr.name.startsWith('_');
-
-  @override
   R accept<R>(ArgumentVisitor<R> visitor) {
     return visitor.visitInvalidType(this);
   }
@@ -170,6 +161,25 @@ class IterableDoubleArgument extends IterableArgument {
   @override
   R accept<R>(ArgumentVisitor<R> visitor) {
     return visitor.visitIterableDouble(this);
+  }
+}
+
+/// A List<Enum> or Set<Enum> argument.
+class IterableEnumArgument extends IterableArgument {
+  // ignore: public_member_api_docs
+  IterableEnumArgument({
+    required super.intr,
+    required super.iterableType,
+    required super.optionName,
+    required this.enumIntr,
+  });
+
+  // ignore: public_member_api_docs
+  final EnumIntrospectionData enumIntr;
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableEnum(this);
   }
 }
 

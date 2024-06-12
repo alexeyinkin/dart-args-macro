@@ -24,8 +24,11 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
     final name = intr.clazz.identifier.name;
     final c = intr.codes;
 
-    final arguments =
-        intr.arguments.arguments.values.where((a) => a.isInConstructor);
+    final arguments = intr.arguments.arguments.values.where(
+      (a) =>
+          a.intr.constructorHandling ==
+          FieldConstructorHandling.namedOrPositional,
+    );
 
     return [
       //
@@ -103,6 +106,33 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
         argument,
         intr.codes.double,
       );
+
+  @override
+  List<Object> visitIterableEnum(IterableEnumArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    final result = [
+      //
+      argument.intr.name,
+      ': $valueGetter.map((e) => ',
+      argument.enumIntr.unaliasedTypeDeclaration.identifier,
+      '.values.byName(e)',
+      ')',
+    ];
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          ...result,
+          '.toList(growable: false)',
+        ];
+      case IterableType.set:
+        return [
+          ...result,
+          '.toSet()',
+        ];
+    }
+  }
 
   @override
   List<Object> visitIterableInt(IterableIntArgument argument) =>
