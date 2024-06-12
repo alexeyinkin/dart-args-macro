@@ -1,3 +1,8 @@
+[![Pub Package](https://img.shields.io/pub/v/args_macro.svg)](https://pub.dev/packages/args_macro)
+[![GitHub](https://img.shields.io/github/license/alexeyinkin/dart-args-macro)](https://github.com/alexeyinkin/dart-args-macro/blob/main/LICENSE)
+[![CodeFactor](https://img.shields.io/codefactor/grade/github/alexeyinkin/dart-args-macro?style=flat-square)](https://www.codefactor.io/repository/github/alexeyinkin/dart-args-macro)
+[![Support Chat](https://img.shields.io/badge/support%20chat-telegram-brightgreen)](https://ainkin.com/chat)
+
 Generates a parser for command-line arguments based on your data class,
 wraps the standard [args](https://pub.dev/packages/args) package.
 
@@ -26,6 +31,18 @@ class MyArgs {
   final Fruit requiredEnum;
   final Fruit? optionalEnum;
   Fruit enumWithDefault = Fruit.mango;
+
+  final List<String> stringList;
+  List<String> stringListWithDefault = ['Huey', 'Dewey', 'Louie'];
+
+  final List<int> intList;
+  List<int> intListWithDefault = [1, 2];
+
+  final List<double> doubleList;
+  List<double> doubleListWithDefault = [1, 2.0];
+
+  final List<Fruit> enumList;
+  List<Fruit> enumListWithDefault = [Fruit.apple, Fruit.banana];
 }
 
 enum Fruit { apple, banana, mango, orange }
@@ -129,27 +146,124 @@ class MyArgs {
 enum Fruit { apple, banana, mango, orange }
 ```
 
+#### List, Set
+
+A `List` and `Set` field produce options that can be passed multiple times in the command line.
+Each time adds an item to the collection.
+
+A default value can be used if the option was passed zero times.
+
+Use `Set` if you don't care about the order of the values and want them deduplicated.
+Otherwise, use `List`.
+
+The collections support `String`, `int`, `double`, and `enum`.
+
+```dart
+@Args()
+class MyArgs {
+  final List<String> stringList;
+  List<String> stringListWithDefault = ['Huey', 'Dewey', 'Louie'];
+
+  final List<int> intList;
+  List<int> intListWithDefault = [1, 2];
+
+  final List<double> doubleList;
+  List<double> doubleListWithDefault = [1, 2.0];
+
+  final List<Fruit> enumList;
+  List<Fruit> enumListWithDefault = [Fruit.apple, Fruit.banana];
+
+  final Set<String> stringSet;
+  Set<String> stringSetWithDefault = {'Huey', 'Dewey', 'Louie'};
+
+  final Set<int> intSet;
+  Set<int> intSetWithDefault = {3, 4};
+
+  final Set<double> doubleSet;
+  Set<double> doubleSetWithDefault = {3, 4.0};
+
+  final Set<Fruit> enumSet;
+  Set<Fruit> enumSetWithDefault = {Fruit.orange, Fruit.banana};
+}
+
+enum Fruit { apple, banana, mango, orange }
+```
 
 ## Help
 
 The parser automatically adds `--help` option.
 It prints the usage and terminates the program (`parse()` method never returns).
 
+### Help messages for arguments
+
+To add a help message for an option, define a static variable by prepending an underscore
+and appending `Help` to the field name:
+
+```dart
+@Args()
+class MyArgs {
+  final String requiredString;
+  static const _requiredStringHelp = 'Help for the required string.';
+  // ...
+}
+```
+
+### Executable Name and Description
+
+To prepend the help text with the description and an example of the command,
+pass the following parameters to the macro:
+
+```dart
+@Args(
+  description: 'The command description.',
+  executableName: 'executable_name',
+)
+class MyArgs { /* ... */ }
+```
+
+### Help Example
+
+This is the output of the full-fledged
+[example file](example/lib/main.dart):
+
 ```none
-    --required-string (mandatory)
-    --optional-string
+The command description.
+
+Usage: executable_name [arguments]
+    --required-string (mandatory)    Help for the required string.
+    --optional-string                
     --string-with-default            (defaults to "My default string.")
-    --required-int (mandatory)
-    --optional-int
+    --required-int (mandatory)       
+    --optional-int                   Help for the optional int.
     --int-with-default               (defaults to "7")
-    --required-double (mandatory)
-    --optional-double
+    --required-double (mandatory)    Help for the required double.
+    --optional-double                
     --double-with-default            (defaults to "7.77")
-    --bool-with-default-false        
+    --bool-with-default-false        Help for the flag.
     --no-bool-with-default-true      
     --required-enum (mandatory)      [apple, banana, mango, orange]
-    --optional-enum                  [apple, banana, mango, orange]
+    --optional-enum                  Help for the optional Enum.
+                                     [apple, banana, mango, orange]
     --enum-with-default              [apple, banana, mango (default), orange]
+    --string-list                    
+    --string-list-with-default       Help for String[] with default.
+                                     (defaults to "Huey", "Dewey", "Louie")
+    --int-list                       Help for int[].
+    --int-list-with-default          (defaults to "1", "2")
+    --double-list                    Help for double[].
+    --double-list-with-default       (defaults to "1.0", "2.0")
+    --enum-list                      Help for Enum[].
+                                     [apple, banana, mango, orange]
+    --enum-list-with-default         [apple (default), banana (default), mango, orange]
+    --string-set                     Help for String{}.
+    --string-set-with-default        (defaults to "Huey", "Dewey", "Louie")
+    --int-set                        Help for int{}.
+    --int-set-with-default           (defaults to "3", "4")
+    --double-set                     Help for double{}.
+    --double-set-with-default        (defaults to "3.0", "4.0")
+    --enum-set                       Help for Enum{}.
+                                     [apple, banana, mango, orange]
+    --enum-set-with-default          [apple, banana (default), mango, orange (default)]
 -h, --help                           Print this usage information.
 ```
 
@@ -180,7 +294,10 @@ The macros feature is experimental in Dart.
 Things are expected to break.
 Do not use this package in production code.
 
-For instance, the support for enum in macros is currently very poor.
-This package uses workarounds and handles them as classes.
-This is expected to break at some point when the macros API starts returning enum-related objects
-instead of class-related ones.
+## Roadmap
+
+The following improvements are blocked because the Macro API does not allow them at this point:
+
+- [Help for a field from the doc comment](https://github.com/alexeyinkin/dart-args-macro/issues/2)
+- [Real enum introspection](https://github.com/alexeyinkin/dart-args-macro/issues/3)
+- [Allow final for fields with an initializer](https://github.com/alexeyinkin/dart-args-macro/issues/4)

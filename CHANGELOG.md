@@ -1,3 +1,9 @@
+## 0.1.0-7.dev
+
+* Support `List<String>`, `List<int>`, `List<double>`, `List<Enum>`, `Set<String>`, `Set<int>`, `Set<double>`, `Set<Enum>`.
+* Support help messages.
+* Silence the compile errors from fields starting with an underscore. Ban underscores in the middle.
+
 ## 0.1.0-6.dev
 
 * Support boolean flags.
