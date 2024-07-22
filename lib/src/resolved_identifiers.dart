@@ -42,7 +42,7 @@ class ResolvedIdentifiers {
   final Identifier String;
   final Identifier StringBuffer;
 
-  static Future<ResolvedIdentifiers> fill(
+  static Future<ResolvedIdentifiers> resolve(
     MemberDeclarationBuilder builder,
   ) async {
     final (

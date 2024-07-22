@@ -22,7 +22,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
   // ignore: public_member_api_docs
   List<Object> generate() {
     final name = intr.clazz.identifier.name;
-    final c = intr.codes;
+    final ids = intr.ids;
 
     final arguments = intr.arguments.arguments.values.where(
       (a) =>
@@ -32,7 +32,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
     return [
       //
-      name, ' parse(', c.List, '<', c.String, '> argv) {\n',
+      name, ' parse(', ids.List, '<', ids.String, '> argv) {\n',
       '  try {\n',
       '    final wrapped = _parseWrapped(argv);\n',
       '    return $name(\n',
@@ -40,16 +40,16 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
       for (final argument in arguments)
         ...[...argument.accept(this), ',\n'].indent(6),
       '    );\n',
-      '  } on ', c.ArgumentError, ' catch (e) {\n',
-      '    ', c.stderr, '.writeln(e.message);', '\n',
-      '    ', c.stderr, '.writeln();', '\n',
-      '    _printUsage(', c.stderr, ');\n',
-      '    ', c.exit, '(64);\n',
-      '  } on ', c.FormatException, ' catch (e) {\n',
-      '    ', c.stderr, '.writeln(e.message);', '\n',
-      '    ', c.stderr, '.writeln();', '\n',
-      '    _printUsage(', c.stderr, ');\n',
-      '    ', c.exit, '(64);\n',
+      '  } on ', ids.ArgumentError, ' catch (e) {\n',
+      '    ', ids.stderr, '.writeln(e.message);', '\n',
+      '    ', ids.stderr, '.writeln();', '\n',
+      '    _printUsage(', ids.stderr, ');\n',
+      '    ', ids.exit, '(64);\n',
+      '  } on ', ids.FormatException, ' catch (e) {\n',
+      '    ', ids.stderr, '.writeln(e.message);', '\n',
+      '    ', ids.stderr, '.writeln();', '\n',
+      '    _printUsage(', ids.stderr, ');\n',
+      '    ', ids.exit, '(64);\n',
       '  }\n',
       '}\n',
     ];
@@ -70,7 +70,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
   @override
   List<Object> visitDouble(DoubleArgument argument) =>
-      _visitIntDouble(argument, intr.codes.double);
+      _visitIntDouble(argument, intr.ids.double);
 
   @override
   List<Object> visitEnum(EnumArgument argument) {
@@ -88,7 +88,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
   @override
   List<Object> visitInt(IntArgument argument) =>
-      _visitIntDouble(argument, intr.codes.int);
+      _visitIntDouble(argument, intr.ids.int);
 
   @override
   List<Object> visitInvalidType(InvalidTypeArgument argument) {
@@ -104,7 +104,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
   List<Object> visitIterableDouble(IterableDoubleArgument argument) =>
       _visitIterableIntDouble(
         argument,
-        intr.codes.double,
+        intr.ids.double,
       );
 
   @override
@@ -138,7 +138,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
   List<Object> visitIterableInt(IterableIntArgument argument) =>
       _visitIterableIntDouble(
         argument,
-        intr.codes.int,
+        intr.ids.int,
       );
 
   @override
@@ -172,7 +172,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
   List<Object> _visitIntDouble(
     Argument argument,
-    NamedTypeAnnotationCode typeCode,
+    Identifier typeId,
   ) {
     final valueGetter = _getOptionValueGetter(argument);
 
@@ -181,14 +181,14 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
       ': ',
       if (argument.intr.fieldDeclaration.type.isNullable)
         '$valueGetter == null ? null : ',
-      typeCode,
+      typeId,
       '.tryParse($valueGetter!)',
       ' ?? (throw ',
-      intr.codes.ArgumentError,
+      intr.ids.ArgumentError,
       '.value(\n',
       '  $valueGetter,\n',
       '  "${argument.optionName}",\n',
-      '  "Cannot parse the value of \\"${argument.optionName}\\" into ${typeCode.name.name}, \\"" + $valueGetter! + "\\" given.",\n',
+      '  "Cannot parse the value of \\"${argument.optionName}\\" into ${typeId.name}, \\"" + $valueGetter! + "\\" given.",\n',
       ')',
       ')',
     ];
@@ -196,19 +196,19 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
   List<Object> _visitIterableIntDouble(
     IterableArgument argument,
-    NamedTypeAnnotationCode typeCode,
+    Identifier typeId,
   ) {
     final valueGetter = _getMultiOptionValueGetter(argument);
 
     final result = [
       //
       argument.intr.name,
-      ': $valueGetter.map((e) => ', typeCode, '.tryParse(e) ?? (throw ',
-      intr.codes.ArgumentError,
+      ': $valueGetter.map((e) => ', typeId, '.tryParse(e) ?? (throw ',
+      intr.ids.ArgumentError,
       '.value(\n',
       '  $valueGetter,\n',
       '  "${argument.optionName}",\n',
-      '  "Cannot parse the value of \\"${argument.optionName}\\" into ${typeCode.name.name}, \\"" + e + "\\" given.",\n',
+      '  "Cannot parse the value of \\"${argument.optionName}\\" into ${typeId.name}, \\"" + e + "\\" given.",\n',
       ')', // value
       ')', // throw
       ')', // map

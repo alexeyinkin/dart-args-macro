@@ -1,3 +1,7 @@
+## 0.1.0-8.dev
+
+* Cleaned up, using `Identifier` instead of `Code` where possible.
+
 ## 0.1.0-7.dev
 
 * Support `List<String>`, `List<int>`, `List<double>`, `List<Enum>`, `Set<String>`, `Set<int>`, `Set<double>`, `Set<Enum>`.

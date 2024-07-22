@@ -19,12 +19,12 @@ class ToDebugStringGenerator {
 
   // ignore: public_member_api_docs
   List<Object> generate() {
-    final c = intr.codes;
+    final ids = intr.ids;
 
     return [
       //
-      c.String, ' toDebugString() {\n',
-      '  final buffer = ', c.StringBuffer, '();\n\n',
+      ids.String, ' toDebugString() {\n',
+      '  final buffer = ', ids.StringBuffer, '();\n\n',
       for (final argument in intr.arguments.arguments.values)
         if (argument.isValid)
           ...[..._fieldToDebugString(argument), '\n'].indent(),

@@ -1,7 +1,7 @@
 name: args_macro
 description: Generates a parser for command-line arguments based on your data class.
 repository: https://github.com/alexeyinkin/dart-args-macro.git
-version: 0.1.0-7.dev
+version: 0.1.0-8.dev
 
 environment:
   sdk: ^3.5.0-164
@@ -24,9 +24,9 @@ dev_dependencies:
   test_util: ^0.1.1
   total_lints: ^3.4.0
 
-#dependency_overrides:
-#  common_macros: { path: ../dart-common-macros }
-#  lsp_client: { path: ../dart-lsp-client }
-#  macro_util: { path: ../dart-macro-util }
-#  matching: { path: ../dart-matching }
-#  show_augmentation: { path: ../dart-show-augmentation }
+dependency_overrides:
+  #common_macros: { path: ../dart-common-macros }
+  #lsp_client: { path: ../dart-lsp-client }
+  #macro_util: { path: ../dart-macro-util }
+  #matching: { path: ../dart-matching }
+  #show_augmentation: { path: ../dart-show-augmentation }

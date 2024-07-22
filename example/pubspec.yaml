@@ -11,6 +11,6 @@ dev_dependencies:
   show_augmentation: ^0.1.0-7.dev
   total_lints: ^3.4.0
 
-#dependency_overrides:
-#  common_macros: { path: ../../dart-common-macros }
-#  macro_util: { path: ../../dart-macro-util }
+dependency_overrides:
+  #common_macros: { path: ../../dart-common-macros }
+  #macro_util: { path: ../../dart-macro-util }

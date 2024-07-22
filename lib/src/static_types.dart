@@ -3,7 +3,7 @@
 
 import 'package:macros/macros.dart';
 
-import 'codes.dart';
+import 'resolved_identifiers.dart';
 
 class StaticTypes {
   StaticTypes({
@@ -12,11 +12,11 @@ class StaticTypes {
 
   final StaticType Enum;
 
-  static Future<StaticTypes> fill(
+  static Future<StaticTypes> resolve(
     MemberDeclarationBuilder builder,
-    Codes codes,
+    ResolvedIdentifiers ids,
   ) async {
-    final Enum = await builder.resolve(codes.Enum);
+    final Enum = await builder.resolve(NamedTypeAnnotationCode(name: ids.Enum));
 
     return StaticTypes(
       Enum: Enum,

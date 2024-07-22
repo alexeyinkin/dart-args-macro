@@ -7,7 +7,6 @@ import 'package:macros/macros.dart';
 
 import '../argument.dart';
 import '../arguments.dart';
-import '../codes.dart';
 import '../enum_introspection_data.dart';
 import '../identifiers.dart';
 import '../introspection_data.dart';
@@ -95,7 +94,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       DeclarationCode.fromParts([
         //
         'augment class $parserName {\n',
-        '  final parser = ', intr.codes.ArgParser, '();\n',
+        '  final parser = ', intr.ids.ArgParser, '();\n',
         '  static ${Identifiers.silenceUninitializedError}() {}\n',
         ...MockDataObjectGenerator(intr).generate().indent(),
         ..._getConstructor(intr.clazz).indent(),
@@ -141,22 +140,22 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   }
 
   List<Object> _getParseWrapped(IntrospectionData intr) {
-    final c = intr.codes;
+    final ids = intr.ids;
 
     return [
       //
-      c.ArgResults, ' _parseWrapped(', c.List, '<',
-      c.String, '> argv) {\n',
+      ids.ArgResults, ' _parseWrapped(', ids.List, '<',
+      ids.String, '> argv) {\n',
       '  final results = parser.parse(argv);\n',
       '\n',
       '  if (results.flag("$_helpFlag")) {\n',
-      '    _printUsage(', c.stdout, ');\n',
-      '    ', c.exit, '(0);\n',
+      '    _printUsage(', ids.stdout, ');\n',
+      '    ', ids.exit, '(0);\n',
       '  }\n',
       '\n',
       '  for (final option in parser.options.values) {\n',
       '    if (option.mandatory && !results.wasParsed(option.name)) {\n',
-      '      throw ', c.ArgumentError, '.value(\n',
+      '      throw ', ids.ArgumentError, '.value(\n',
       '        null,\n',
       '        option.name,\n',
       r'        "Option \"${option.name}\" is mandatory.",', '\n',
@@ -172,7 +171,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   List<Object> _getPrintUsage(IntrospectionData intr) {
     return [
       //
-      'void _printUsage(', intr.codes.IOSink, ' stream) {\n',
+      'void _printUsage(', intr.ids.IOSink, ' stream) {\n',
       '  stream.writeln(${jsonEncode(_getUsagePrefix())});\n',
       '  stream.writeln(parser.usage);\n',
       '}\n',
@@ -221,12 +220,11 @@ Future<IntrospectionData> _introspect(
   ClassDeclaration clazz,
   MemberDeclarationBuilder builder,
 ) async {
-  final ids = await ResolvedIdentifiers.fill(builder);
-  final codes = Codes.fromResolvedIdentifiers(ids);
+  final ids = await ResolvedIdentifiers.resolve(builder);
 
   final (fields, staticTypes) = await (
     builder.introspectFields(clazz),
-    StaticTypes.fill(builder, codes),
+    StaticTypes.resolve(builder, ids),
   ).wait;
 
   final arguments = await _fieldsToArguments(
@@ -238,8 +236,8 @@ Future<IntrospectionData> _introspect(
   return IntrospectionData(
     arguments: arguments,
     clazz: clazz,
-    codes: codes,
     fields: fields,
+    ids: ids,
     staticTypes: staticTypes,
   );
 }
@@ -452,7 +450,6 @@ Future<Argument?> _fieldToArgument(
       final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
 
       if (paramTypeDecl.library.uri != Libraries.core) {
-        // reportError(field.identifier.name);
         final paramStaticType = await builder.resolve(paramType.code);
         if (await paramStaticType.isSubtypeOf(staticTypes.Enum)) {
           return IterableEnumArgument(
