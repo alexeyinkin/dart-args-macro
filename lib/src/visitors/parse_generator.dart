@@ -54,11 +54,13 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
 
   @override
   List<Object> visitInt(IntArgument argument) {
+    final valueGetter = _getOptionValueGetter(argument);
+
     return [
       argument.intr.name,
       ': ',
       intr.ids.int,
-      '.parse(wrapped.option(${jsonEncode(argument.optionName)})!)',
+      '.parse($valueGetter!)',
     ];
   }
 
@@ -71,10 +73,62 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitIterableInt(IterableIntArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    final result = [
+      //
+      argument.intr.name,
+      ': $valueGetter.map((e) => ', intr.ids.int, '.parse(e))',
+    ];
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          ...result,
+          '.toList(growable: false)',
+        ];
+      case IterableType.set:
+        return [
+          ...result,
+          '.toSet()',
+        ];
+    }
+  }
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          argument.intr.name,
+          ': $valueGetter',
+        ];
+      case IterableType.set:
+        return [
+          argument.intr.name,
+          ': $valueGetter.toSet()',
+        ];
+    }
+  }
+
+  @override
   List<Object> visitString(StringArgument argument) {
+    final valueGetter = _getOptionValueGetter(argument);
+
     return [
       argument.intr.name,
-      ': wrapped.option(${jsonEncode(argument.optionName)})!',
+      ': $valueGetter!',
     ];
+  }
+
+  String _getOptionValueGetter(Argument argument) {
+    return 'wrapped.option(${jsonEncode(argument.optionName)})';
+  }
+
+  String _getMultiOptionValueGetter(Argument argument) {
+    return 'wrapped.multiOption(${jsonEncode(argument.optionName)})';
   }
 }

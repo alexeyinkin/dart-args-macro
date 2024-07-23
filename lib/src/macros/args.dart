@@ -8,6 +8,7 @@ import '../argument.dart';
 import '../introspection_data.dart';
 import '../libraries.dart';
 import '../resolved_identifiers.dart';
+import '../util.dart';
 import '../visitors/add_options_generator.dart';
 import '../visitors/parse_generator.dart';
 
@@ -110,7 +111,7 @@ Future<IntrospectionData> _introspect(
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
   final fields = await builder.introspectFields(clazz);
-  final arguments = _fieldsToArguments(fields, builder);
+  final arguments = await _fieldsToArguments(fields, builder);
 
   return IntrospectionData(
     arguments: arguments,
@@ -120,20 +121,26 @@ Future<IntrospectionData> _introspect(
   );
 }
 
-Map<String, Argument> _fieldsToArguments(
+Future<Map<String, Argument>> _fieldsToArguments(
   Map<String, FieldIntrospectionData> fields,
   DeclarationBuilder builder,
-) {
-  return {
-    for (final entry in fields.entries)
-      entry.key: _fieldToArgument(entry.value, builder: builder),
-  };
+) async {
+  final futures = <String, Future<Argument>>{};
+
+  for (final entry in fields.entries) {
+    futures[entry.key] = _fieldToArgument(
+      entry.value,
+      builder: builder,
+    );
+  }
+
+  return waitMap(futures);
 }
 
-Argument _fieldToArgument(
+Future<Argument> _fieldToArgument(
   FieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
-}) {
+}) async {
   final field = fieldIntr.fieldDeclaration;
   final target = field.asDiagnosticTarget;
 
@@ -157,7 +164,11 @@ Argument _fieldToArgument(
       return;
     }
 
-    reportError('The only allowed types are: String, int.');
+    reportError(
+      'The only allowed types are: String, int, '
+      'List<String>, List<int>, '
+      'Set<String>, Set<int>.'
+    );
   }
 
   if (fieldIntr is! ResolvedFieldIntrospectionData) {
@@ -165,8 +176,13 @@ Argument _fieldToArgument(
     return InvalidTypeArgument(intr: fieldIntr);
   }
 
-  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
+  final typeDecl = fieldIntr.deAliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
+
+  if (type is! NamedTypeAnnotation) {
+    unsupportedType();
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
 
   if (field.hasInitializer) {
     reportError('Initializers are not allowed for argument fields.');
@@ -186,6 +202,55 @@ Argument _fieldToArgument(
         intr: fieldIntr,
         optionName: optionName,
       );
+
+    case 'List':
+    case 'Set':
+      final paramType = type.typeArguments.firstOrNull;
+      if (paramType == null) {
+        reportError(
+          'A $typeName requires a type parameter: '
+          '$typeName<String>, $typeName<int>.',
+        );
+
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
+      if (paramType.isNullable) {
+        reportError(
+          'A $typeName type parameter must be non-nullable because each '
+          'element is either parsed successfully or breaks the execution.',
+        );
+
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
+      if (paramType is! NamedTypeAnnotation) {
+        unsupportedType();
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
+      final paramTypeDecl = await builder.deAliasedTypeDeclarationOf(paramType);
+
+      if (paramTypeDecl.library.uri != Libraries.core) {
+        unsupportedType();
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
+      switch (paramTypeDecl.identifier.name) {
+        case 'int':
+          return IterableIntArgument(
+            intr: fieldIntr,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+
+        case 'String':
+          return IterableStringArgument(
+            intr: fieldIntr,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+      }
 
     case 'String':
       return StringArgument(

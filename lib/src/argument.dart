@@ -64,6 +64,54 @@ class InvalidTypeArgument extends Argument {
   }
 }
 
+/// A [List] or [Set] argument.
+abstract class IterableArgument extends ResolvedTypeArgument {
+  IterableArgument({
+    required super.intr,
+    required super.optionName,
+    required this.iterableType,
+  });
+
+  final IterableType iterableType;
+}
+
+/// A List<int> or Set<int> argument.
+class IterableIntArgument extends IterableArgument {
+  IterableIntArgument({
+    required super.intr,
+    required super.iterableType,
+    required super.optionName,
+  });
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableInt(this);
+  }
+}
+
+/// A List<String> or Set<String> argument.
+class IterableStringArgument extends IterableArgument {
+  IterableStringArgument({
+    required super.intr,
+    required super.iterableType,
+    required super.optionName,
+  });
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableString(this);
+  }
+}
+
+/// A type of an [Iterable] supported for argument parsing.
+enum IterableType {
+  /// A [List].
+  list,
+
+  /// A [Set].
+  set,
+}
+
 /// A [String] argument.
 class StringArgument extends ResolvedTypeArgument {
   StringArgument({

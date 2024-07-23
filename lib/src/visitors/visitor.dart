@@ -4,5 +4,7 @@ import '../argument.dart';
 abstract class ArgumentVisitor<R> {
   R visitInt(IntArgument argument);
   R visitInvalidType(InvalidTypeArgument argument);
+  R visitIterableInt(IterableIntArgument argument);
+  R visitIterableString(IterableStringArgument argument);
   R visitString(StringArgument argument);
 }

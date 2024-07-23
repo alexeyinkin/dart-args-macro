@@ -30,6 +30,14 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitIterableInt(IterableIntArgument argument) =>
+      _visitIterableStringInt(argument);
+
+  @override
+  List<Object> visitIterableString(IterableStringArgument argument) =>
+      _visitIterableStringInt(argument);
+
+  @override
   List<Object> visitString(StringArgument argument) =>
       _visitStringInt(argument);
 
@@ -39,6 +47,15 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       'parser.addOption(\n',
       '  "${argument.optionName}",\n',
       '  mandatory: true,\n',
+      ');\n',
+    ];
+  }
+
+  List<Object> _visitIterableStringInt(IterableArgument argument) {
+    return [
+      //
+      'parser.addMultiOption(\n',
+      '  "${argument.optionName}",\n',
       ');\n',
     ];
   }
