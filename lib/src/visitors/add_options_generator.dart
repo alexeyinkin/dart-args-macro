@@ -1,5 +1,3 @@
-import 'package:macro_util/macro_util.dart';
-
 import '../argument.dart';
 import '../introspection_data.dart';
 import 'visitor.dart';
@@ -25,6 +23,11 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
 
   @override
   List<Object> visitInt(IntArgument argument) => _visitStringInt(argument);
+
+  @override
+  List<Object> visitInvalidType(InvalidTypeArgument argument) {
+    return const [];
+  }
 
   @override
   List<Object> visitString(StringArgument argument) =>

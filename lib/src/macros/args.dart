@@ -6,8 +6,8 @@ import 'package:macros/macros.dart';
 
 import '../argument.dart';
 import '../introspection_data.dart';
+import '../libraries.dart';
 import '../resolved_identifiers.dart';
-import '../util.dart';
 import '../visitors/add_options_generator.dart';
 import '../visitors/parse_generator.dart';
 
@@ -58,6 +58,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.ids.ArgParser, '();\n',
+        '  static var _silenceUninitializedError;\n',
         ..._getConstructor(intr.clazz),
         ...AddOptionsGenerator(intr).generate(),
         ...ParseGenerator(intr).generate(),
@@ -109,7 +110,7 @@ Future<IntrospectionData> _introspect(
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
   final fields = await builder.introspectFields(clazz);
-  final arguments = await _fieldsToArguments(fields, builder);
+  final arguments = _fieldsToArguments(fields, builder);
 
   return IntrospectionData(
     arguments: arguments,
@@ -119,28 +120,64 @@ Future<IntrospectionData> _introspect(
   );
 }
 
-Future<Map<String, Argument>> _fieldsToArguments(
+Map<String, Argument> _fieldsToArguments(
   Map<String, FieldIntrospectionData> fields,
   DeclarationBuilder builder,
-) async {
-  final futures = <String, Future<Argument>>{};
-
-  for (final entry in fields.entries) {
-    futures[entry.key] = _fieldToArgument(
-      entry.value as ResolvedFieldIntrospectionData,
-      builder: builder,
-    );
-  }
-
-  return waitMap(futures);
+) {
+  return {
+    for (final entry in fields.entries)
+      entry.key: _fieldToArgument(entry.value, builder: builder),
+  };
 }
 
-Future<Argument> _fieldToArgument(
-  ResolvedFieldIntrospectionData fieldIntr, {
+Argument _fieldToArgument(
+  FieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
-}) async {
+}) {
+  final field = fieldIntr.fieldDeclaration;
+  final target = field.asDiagnosticTarget;
+
+  if (fieldIntr.name.contains('_')) {
+    builder.reportError(
+      'An argument field name cannot contain an underscore.',
+      target: target,
+    );
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
+  final type = field.type;
+
+  void reportError(String message) {
+    builder.reportError(message, target: target);
+  }
+
+  void unsupportedType() {
+    if (type is OmittedTypeAnnotation) {
+      reportError('An explicitly declared type is required here.');
+      return;
+    }
+
+    reportError('The only allowed types are: String, int.');
+  }
+
+  if (fieldIntr is! ResolvedFieldIntrospectionData) {
+    unsupportedType();
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
   final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
+
+  if (field.hasInitializer) {
+    reportError('Initializers are not allowed for argument fields.');
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
+  if (typeDecl.library.uri != Libraries.core) {
+    unsupportedType();
+    return InvalidTypeArgument(intr: fieldIntr);
+  }
+
   final typeName = typeDecl.identifier.name;
 
   switch (typeName) {
@@ -157,5 +194,6 @@ Future<Argument> _fieldToArgument(
       );
   }
 
-  throw Exception();
+  unsupportedType();
+  return InvalidTypeArgument(intr: fieldIntr);
 }

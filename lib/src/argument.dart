@@ -21,8 +21,21 @@ sealed class Argument {
   R accept<R>(ArgumentVisitor<R> visitor);
 }
 
+/// An argument backed by a field with a successfully resolved type.
+abstract class ResolvedTypeArgument extends Argument {
+  // ignore: public_member_api_docs
+  ResolvedTypeArgument({
+    required ResolvedFieldIntrospectionData super.intr,
+    required super.optionName,
+  });
+
+  @override
+  ResolvedFieldIntrospectionData get intr =>
+      super.intr as ResolvedFieldIntrospectionData;
+}
+
 /// An [int] argument.
-class IntArgument extends Argument {
+class IntArgument extends ResolvedTypeArgument {
   IntArgument({
     required super.intr,
     required super.optionName,
@@ -34,8 +47,25 @@ class IntArgument extends Argument {
   }
 }
 
+/// A placeholder [Argument] for any invalid field.
+///
+/// Used to pass a value in the constructors to silence the error
+/// of an uninitialized field.
+class InvalidTypeArgument extends Argument {
+  InvalidTypeArgument({
+    required super.intr,
+  }) : super(
+          optionName: '',
+        );
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitInvalidType(this);
+  }
+}
+
 /// A [String] argument.
-class StringArgument extends Argument {
+class StringArgument extends ResolvedTypeArgument {
   StringArgument({
     required super.intr,
     required super.optionName,

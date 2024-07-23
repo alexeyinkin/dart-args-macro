@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:macro_util/macro_util.dart';
+
 import '../argument.dart';
 import '../introspection_data.dart';
 import 'visitor.dart';
@@ -14,18 +16,40 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     final name = intr.clazz.identifier.name;
     final ids = intr.ids;
 
+    final arguments = intr.arguments.values.where(
+      (a) =>
+          a.intr.constructorHandling ==
+          FieldConstructorHandling.namedOrPositional,
+    );
+
     return [
       //
       name, ' parse(', ids.List, '<', ids.String, '> argv) {\n',
       '  final wrapped = parser.parse(argv);\n',
       '  return $name(\n',
-      for (final argument in intr.arguments.values) ...[
+      for (final param in _getPositionalParams()) ...[...param, ',\n'],
+      for (final argument in arguments) ...[
         ...argument.accept(this),
         ',\n',
       ],
       '  );\n',
       '}\n',
     ];
+  }
+
+  List<List<Object>> _getPositionalParams() {
+    final result = <List<Object>>[];
+    final fields = intr.fields.values.where(
+      (f) => f.constructorHandling == FieldConstructorHandling.positional,
+    );
+
+    for (final _ in fields) {
+      result.add([
+        '_silenceUninitializedError',
+      ]);
+    }
+
+    return result;
   }
 
   @override
@@ -35,6 +59,14 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       ': ',
       intr.ids.int,
       '.parse(wrapped.option(${jsonEncode(argument.optionName)})!)',
+    ];
+  }
+
+  @override
+  List<Object> visitInvalidType(InvalidTypeArgument argument) {
+    return [
+      argument.intr.name,
+      ': _silenceUninitializedError',
     ];
   }
 
