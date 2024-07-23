@@ -10,6 +10,7 @@ void main(List<String> argv) {
   final parser = HelloArgsParser(); // Generated class.
   final HelloArgs args = parser.parse(argv);
 
-  for (int n = 0; n < args.count; n++)
+  for (int n = 0; n < args.count; n++) {
     print('Hello, ${args.name}!');
+  }
 }

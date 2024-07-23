@@ -42,7 +42,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
     ClassTypeBuilder builder,
   ) async {
     final name = clazz.identifier.name;
-    final parserName = '${name}Parser';
+    final parserName = _getParserName(clazz);
 
     builder.declareType(
       name,
