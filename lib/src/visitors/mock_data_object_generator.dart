@@ -86,7 +86,7 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
     return [
       argument.intr.name,
       ': ',
-      argument.intr.unaliasedTypeDeclaration.identifier,
+      argument.intr.deAliasedTypeDeclaration.identifier,
       '.values.first',
     ];
   }

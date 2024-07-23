@@ -80,7 +80,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
       ': ',
       if (argument.intr.fieldDeclaration.type.isNullable)
         '$valueGetter == null ? null : ',
-      argument.intr.unaliasedTypeDeclaration.identifier,
+      argument.intr.deAliasedTypeDeclaration.identifier,
       '.values.byName($valueGetter!)',
     ];
   }
@@ -112,7 +112,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
       //
       argument.intr.name,
       ': $valueGetter.map((e) => ',
-      argument.enumIntr.unaliasedTypeDeclaration.identifier,
+      argument.enumIntr.deAliasedTypeDeclaration.identifier,
       '.values.byName(e)',
       ')',
     ];

@@ -5,11 +5,11 @@ import 'package:macros/macros.dart';
 
 class EnumIntrospectionData {
   EnumIntrospectionData({
-    required this.unaliasedTypeDeclaration,
+    required this.deAliasedTypeDeclaration,
     required this.values,
   });
 
-  final TypeDeclaration unaliasedTypeDeclaration;
+  final TypeDeclaration deAliasedTypeDeclaration;
   final List<EnumConstantIntrospectionData> values;
 }
 
@@ -23,15 +23,15 @@ class EnumConstantIntrospectionData {
 
 extension EnumIntrospectionExtension on DeclarationBuilder {
   Future<EnumIntrospectionData> introspectEnum(
-    TypeDeclaration unaliasedTypeDeclaration,
+    TypeDeclaration deAliasedTypeDeclaration,
   ) async {
-    final fields = await fieldsOf(unaliasedTypeDeclaration);
+    final fields = await fieldsOf(deAliasedTypeDeclaration);
     final values = (await Future.wait(fields.map(introspectEnumField)))
         .whereNotNull()
         .toList(growable: false);
 
     return EnumIntrospectionData(
-      unaliasedTypeDeclaration: unaliasedTypeDeclaration,
+      deAliasedTypeDeclaration: deAliasedTypeDeclaration,
       values: values,
     );
   }

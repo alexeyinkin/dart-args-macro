@@ -255,7 +255,7 @@ Future<Map<String, Argument>> _fieldsToArguments(
     );
   }
 
-  return (await waitMap(futures)).whereNotNull();
+  return (await waitMap(futures)).nonNulls;
 }
 
 Future<Argument?> _fieldToArgument(
@@ -304,7 +304,7 @@ Future<Argument?> _fieldToArgument(
     return InvalidTypeArgument(intr: fieldIntr);
   }
 
-  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
+  final typeDecl = fieldIntr.deAliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
 
   if (type is! NamedTypeAnnotation) {
@@ -350,7 +350,7 @@ Future<Argument?> _fieldToArgument(
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
         enumIntr:
-            await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
+            await builder.introspectEnum(fieldIntr.deAliasedTypeDeclaration),
         intr: fieldIntr,
         optionName: optionName,
       );
@@ -442,7 +442,7 @@ Future<Argument?> _fieldToArgument(
         return InvalidTypeArgument(intr: fieldIntr);
       }
 
-      final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
+      final paramTypeDecl = await builder.deAliasedTypeDeclarationOf(paramType);
 
       if (paramTypeDecl.library.uri != Libraries.core) {
         final paramStaticType = await builder.resolve(paramType.code);

@@ -40,7 +40,7 @@ class ToDebugStringGenerator {
       return const [];
     }
 
-    final className = fieldIntr.unaliasedTypeDeclaration.identifier.name;
+    final className = fieldIntr.deAliasedTypeDeclaration.identifier.name;
     return [
       //
       'buffer.write(${jsonEncode(fieldIntr.name)});\n',
