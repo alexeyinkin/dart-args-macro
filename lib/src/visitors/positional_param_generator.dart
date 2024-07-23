@@ -1,6 +1,5 @@
 import 'package:macro_util/macro_util.dart';
 
-import '../identifiers.dart';
 import 'visitor.dart';
 
 /// Generates positional parameters for constructors of the data class.
@@ -14,8 +13,7 @@ mixin PositionalParamGenerator<R> on ArgumentVisitor<R> {
 
     for (final _ in fields) {
       result.add([
-        Identifiers.silenceUninitializedError,
-        '()',
+        '_silenceUninitializedError',
       ]);
     }
 

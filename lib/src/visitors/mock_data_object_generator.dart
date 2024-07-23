@@ -3,7 +3,6 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
-import '../identifiers.dart';
 import '../introspection_data.dart';
 import 'positional_param_generator.dart';
 import 'visitor.dart';
@@ -104,9 +103,7 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
   List<Object> visitInvalidType(InvalidTypeArgument argument) {
     return [
       argument.intr.name,
-      ': ',
-      Identifiers.silenceUninitializedError,
-      '()',
+      ': _silenceUninitializedError',
     ];
   }
 

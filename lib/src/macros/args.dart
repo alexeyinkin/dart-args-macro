@@ -7,7 +7,6 @@ import 'package:macros/macros.dart';
 
 import '../argument.dart';
 import '../enum_introspection_data.dart';
-import '../identifiers.dart';
 import '../introspection_data.dart';
 import '../libraries.dart';
 import '../resolved_identifiers.dart';
@@ -94,7 +93,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.ids.ArgParser, '();\n',
-        '  static ${Identifiers.silenceUninitializedError}() {}\n',
+        '  static var _silenceUninitializedError;\n',
         ...MockDataObjectGenerator(intr).generate().indent(),
         ..._getConstructor(intr.clazz).indent(),
         ...AddOptionsGenerator(intr).generate().indent(),

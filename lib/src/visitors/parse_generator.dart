@@ -4,7 +4,6 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
-import '../identifiers.dart';
 import '../introspection_data.dart';
 import 'mock_data_object_generator.dart';
 import 'positional_param_generator.dart';
@@ -94,9 +93,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
   List<Object> visitInvalidType(InvalidTypeArgument argument) {
     return [
       argument.intr.name,
-      ': ',
-      Identifiers.silenceUninitializedError,
-      '()',
+      ': _silenceUninitializedError',
     ];
   }
 
