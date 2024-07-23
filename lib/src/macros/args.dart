@@ -7,7 +7,6 @@ import 'package:macros/macros.dart';
 import '../argument.dart';
 import '../introspection_data.dart';
 import '../resolved_identifiers.dart';
-import '../util.dart';
 import '../visitors/add_options_generator.dart';
 import '../visitors/parse_generator.dart';
 
@@ -109,7 +108,7 @@ Future<IntrospectionData> _introspect(
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
   final fields = await builder.introspectFields(clazz);
-  final arguments = await _fieldsToArguments(fields, builder);
+  final arguments = _fieldsToArguments(fields, builder);
 
   return IntrospectionData(
     arguments: arguments,
@@ -119,26 +118,23 @@ Future<IntrospectionData> _introspect(
   );
 }
 
-Future<Map<String, Argument>> _fieldsToArguments(
+Map<String, Argument> _fieldsToArguments(
   Map<String, FieldIntrospectionData> fields,
   DeclarationBuilder builder,
-) async {
-  final futures = <String, Future<Argument>>{};
-
-  for (final entry in fields.entries) {
-    futures[entry.key] = _fieldToArgument(
-      entry.value as ResolvedFieldIntrospectionData,
-      builder: builder,
-    );
-  }
-
-  return waitMap(futures);
+) {
+  return {
+    for (final entry in fields.entries)
+      entry.key: _fieldToArgument(
+        entry.value as ResolvedFieldIntrospectionData,
+        builder: builder,
+      ),
+  };
 }
 
-Future<Argument> _fieldToArgument(
+Argument _fieldToArgument(
   ResolvedFieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
-}) async {
+}) {
   final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
   final typeName = typeDecl.identifier.name;

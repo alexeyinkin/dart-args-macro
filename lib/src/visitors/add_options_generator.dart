@@ -1,5 +1,3 @@
-import 'package:macro_util/macro_util.dart';
-
 import '../argument.dart';
 import '../introspection_data.dart';
 import 'visitor.dart';
