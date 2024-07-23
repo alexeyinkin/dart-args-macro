@@ -3,7 +3,7 @@ import 'package:args_macro/args_macro.dart';
 @Args()
 class HelloArgs {
   final String name;
-  int count = 1;
+  final int count;
 }
 
 void main(List<String> argv) {

@@ -1,40 +1,19 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:common_macros/common_macros.dart';
 import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
-import '../arguments.dart';
-import '../enum_introspection_data.dart';
-import '../identifiers.dart';
 import '../introspection_data.dart';
-import '../libraries.dart';
 import '../resolved_identifiers.dart';
-import '../static_types.dart';
 import '../util.dart';
 import '../visitors/add_options_generator.dart';
-import '../visitors/mock_data_object_generator.dart';
 import '../visitors/parse_generator.dart';
-import '../visitors/to_debug_string_generator.dart';
-
-const _helpFlag = 'help';
-const _hFlag = 'h';
 
 /// Creates a command line argument parser from your data class.
 macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
-  // ignore: public_member_api_docs
-  const Args({
-    this.description,
-    this.executableName,
-  });
-
-  /// Shows before the options help.
-  final String? description;
-
-  /// Shows in the usage line.
-  final String? executableName;
+  const Args();
 
   @override
   Future<void> buildTypesForClass(
@@ -57,31 +36,15 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   ) async {
     final intr = await _introspect(clazz, builder);
 
-    await _declareConstructors(clazz, builder);
-    _declareToDebugString(builder, intr);
+    await _declareConstructor(clazz, builder);
     _augmentParser(builder, intr);
   }
 
-  Future<void> _declareConstructors(
+  Future<void> _declareConstructor(
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
   ) async {
-    await Future.wait([
-      //
-      const Constructor().buildDeclarationsForClass(clazz, builder),
-      MockDataObjectGenerator.createMockConstructor(clazz, builder),
-    ]);
-  }
-
-  void _declareToDebugString(
-    MemberDeclarationBuilder builder,
-    IntrospectionData intr,
-  ) {
-    builder.declareInType(
-      DeclarationCode.fromParts(
-        ToDebugStringGenerator(intr).generate().indent(),
-      ),
-    );
+    await const Constructor().buildDeclarationsForClass(clazz, builder);
   }
 
   void _augmentParser(
@@ -95,14 +58,9 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.ids.ArgParser, '();\n',
-        '  static ${Identifiers.silenceUninitializedError}() {}\n',
-        ...MockDataObjectGenerator(intr).generate().indent(),
         ..._getConstructor(intr.clazz).indent(),
         ...AddOptionsGenerator(intr).generate().indent(),
-        ..._getAddHelpFlag().indent(),
         ...ParseGenerator(intr).generate().indent(),
-        ..._getParseWrapped(intr).indent(),
-        ..._getPrintUsage(intr).indent(),
         '}\n',
       ]),
     );
@@ -120,79 +78,8 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       //
       parserName, '() {\n',
       '  _addOptions();\n',
-      '  _addHelpFlag();\n',
       '}\n',
     ];
-  }
-
-  List<Object> _getAddHelpFlag() {
-    return [
-      //
-      'void _addHelpFlag() {\n',
-      '  parser.addFlag(\n',
-      '    "$_helpFlag",\n',
-      '    abbr: "$_hFlag",\n',
-      '    help: "Print this usage information.",\n',
-      '    negatable: false,\n',
-      '  );\n',
-      '}\n',
-    ];
-  }
-
-  List<Object> _getParseWrapped(IntrospectionData intr) {
-    final ids = intr.ids;
-
-    return [
-      //
-      ids.ArgResults, ' _parseWrapped(', ids.List, '<',
-      ids.String, '> argv) {\n',
-      '  final results = parser.parse(argv);\n',
-      '\n',
-      '  if (results.flag("$_helpFlag")) {\n',
-      '    _printUsage(', ids.stdout, ');\n',
-      '    ', ids.exit, '(0);\n',
-      '  }\n',
-      '\n',
-      '  for (final option in parser.options.values) {\n',
-      '    if (option.mandatory && !results.wasParsed(option.name)) {\n',
-      '      throw ', ids.ArgumentError, '.value(\n',
-      '        null,\n',
-      '        option.name,\n',
-      r'        "Option \"${option.name}\" is mandatory.",', '\n',
-      '      );\n',
-      '    }\n',
-      '  }\n',
-      '\n',
-      '  return results;\n',
-      '}\n',
-    ];
-  }
-
-  List<Object> _getPrintUsage(IntrospectionData intr) {
-    return [
-      //
-      'void _printUsage(', intr.ids.IOSink, ' stream) {\n',
-      '  stream.writeln(${jsonEncode(_getUsagePrefix())});\n',
-      '  stream.writeln(parser.usage);\n',
-      '}\n',
-    ];
-  }
-
-  String _getUsagePrefix() {
-    final buffer = StringBuffer();
-
-    if (description != null) {
-      buffer.writeln(description);
-      buffer.writeln();
-    }
-
-    buffer.write('Usage:');
-    if (executableName != null) {
-      buffer.write(' $executableName');
-    }
-    buffer.write(' [arguments]'); // TODO(alexeyinkin): Don't if no arguments.
-
-    return buffer.toString();
   }
 }
 
@@ -221,16 +108,11 @@ Future<IntrospectionData> _introspect(
   MemberDeclarationBuilder builder,
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
-
-  final (fields, staticTypes) = await (
-    builder.introspectFields(clazz),
-    StaticTypes.resolve(builder, ids),
-  ).wait;
+  final fields = await  builder.introspectFields(clazz);
 
   final arguments = await _fieldsToArguments(
     fields,
     builder: builder,
-    staticTypes: staticTypes,
   );
 
   return IntrospectionData(
@@ -238,266 +120,46 @@ Future<IntrospectionData> _introspect(
     clazz: clazz,
     fields: fields,
     ids: ids,
-    staticTypes: staticTypes,
   );
 }
 
-Future<Arguments> _fieldsToArguments(
+Future<Map<String, Argument>> _fieldsToArguments(
   Map<String, FieldIntrospectionData> fields, {
   required DeclarationBuilder builder,
-  required StaticTypes staticTypes,
 }) async {
-  final futures = <String, Future<Argument?>>{};
+  final futures = <String, Future<Argument>>{};
 
   for (final entry in fields.entries) {
     futures[entry.key] = _fieldToArgument(
-      entry.value,
+      entry.value as ResolvedFieldIntrospectionData,
       builder: builder,
-      staticTypes: staticTypes,
     );
   }
 
-  final arguments = (await waitMap(futures)).whereNotNull();
-  return Arguments(
-    arguments: arguments,
-  );
+  return waitMap(futures);
 }
 
-Future<Argument?> _fieldToArgument(
-  FieldIntrospectionData fieldIntr, {
+Future<Argument> _fieldToArgument(
+  ResolvedFieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
-  required StaticTypes staticTypes,
 }) async {
-  final field = fieldIntr.fieldDeclaration;
-
-  if (field.hasStatic) {
-    return null;
-  }
-
-  final target = field.asDiagnosticTarget;
-
-  if (fieldIntr.name.contains('_')) {
-    builder.reportError(
-      'An argument field name cannot contain an underscore.',
-      target: target,
-    );
-    return InvalidTypeArgument(intr: fieldIntr);
-  }
-
-  final type = field.type;
-
-  void reportError(String message) {
-    builder.reportError(message, target: target);
-  }
-
-  void unsupportedType() {
-    if (type is OmittedTypeAnnotation) {
-      // TODO(alexeyinkin): Allow inferring types, https://github.com/alexeyinkin/dart-args-macro/issues/1
-      reportError('An explicitly declared type is required here.');
-      return;
-    }
-
-    reportError(
-      'The only allowed types are: String, int, double, bool, Enum, '
-      'List<String>, List<int>, List<double>, List<Enum>, '
-      'Set<String>, Set<int>, Set<double>, Set<Enum>.',
-    );
-  }
-
-  if (fieldIntr is! ResolvedFieldIntrospectionData) {
-    unsupportedType();
-    return InvalidTypeArgument(intr: fieldIntr);
-  }
-
   final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
 
-  if (type is! NamedTypeAnnotation) {
-    unsupportedType();
-    return null;
-  }
-
-  bool isValid = true;
-
-  if (field.hasInitializer && field.hasFinal) {
-    reportError(
-      'A field with an initializer cannot be final '
-      'because it needs to be overwritten when parsing the argument.',
-    );
-
-    isValid = false;
-  }
-
-  switch (typeDecl.identifier.name) {
-    case 'bool':
-    case 'List':
-    case 'Set':
-      // These have more specific messages for nullability later.
-      break;
-
-    default:
-      if (field.hasInitializer && type.isNullable) {
-        reportError(
-          'A field with an initializer must be non-nullable '
-          'because nullability and the default value '
-          'are mutually exclusive ways to handle a missing value.',
-        );
-
-        isValid = false;
-      }
-  }
-
-  if (typeDecl.library.uri != Libraries.core) {
-    if (!isValid) {
-      return InvalidTypeArgument(intr: fieldIntr);
-    }
-
-    if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
-      return EnumArgument(
-        enumIntr:
-            await builder.introspectEnum(fieldIntr.unaliasedTypeDeclaration),
-        intr: fieldIntr,
-        optionName: optionName,
-      );
-    }
-
-    unsupportedType();
-    return InvalidTypeArgument(intr: fieldIntr);
-  }
-
   final typeName = typeDecl.identifier.name;
   switch (typeName) {
-    case 'bool':
-      if (type.isNullable) {
-        reportError('Boolean cannot be nullable.');
-        isValid = false;
-      }
-
-      if (!field.hasInitializer) {
-        reportError('Boolean must have a default value.');
-        isValid = false;
-      }
-
-      if (!isValid) {
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      return BoolArgument(
-        intr: fieldIntr,
-        optionName: optionName,
-      );
-
-    case 'double':
-      if (!isValid) {
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      return DoubleArgument(
-        intr: fieldIntr,
-        optionName: optionName,
-      );
-
     case 'int':
-      if (!isValid) {
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
       return IntArgument(
         intr: fieldIntr,
         optionName: optionName,
       );
 
-    case 'List':
-    case 'Set':
-      if (type.isNullable) {
-        reportError(
-          'A $typeName cannot be nullable because it is just empty '
-          'when no options with this name are passed.',
-        );
-
-        isValid = false;
-      }
-
-      final paramType = type.typeArguments.firstOrNull;
-      if (paramType == null) {
-        reportError(
-          'A $typeName requires a type parameter: '
-          '$typeName<String>, $typeName<int>, $typeName<double>, '
-          '$typeName<Enum>.',
-        );
-
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      if (paramType.isNullable) {
-        reportError(
-          'A $typeName type parameter must be non-nullable because each '
-          'element is either parsed successfully or breaks the execution.',
-        );
-
-        isValid = false;
-      }
-
-      if (!isValid) {
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      if (paramType is! NamedTypeAnnotation) {
-        unsupportedType();
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      final paramTypeDecl = await builder.unaliasedTypeDeclarationOf(paramType);
-
-      if (paramTypeDecl.library.uri != Libraries.core) {
-        final paramStaticType = await builder.resolve(paramType.code);
-        if (await paramStaticType.isSubtypeOf(staticTypes.Enum)) {
-          return IterableEnumArgument(
-            enumIntr: await builder.introspectEnum(paramTypeDecl),
-            intr: fieldIntr,
-            iterableType: IterableType.values.byName(typeName.toLowerCase()),
-            optionName: optionName,
-          );
-        }
-
-        unsupportedType();
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
-      switch (paramTypeDecl.identifier.name) {
-        case 'double':
-          return IterableDoubleArgument(
-            intr: fieldIntr,
-            iterableType: IterableType.values.byName(typeName.toLowerCase()),
-            optionName: optionName,
-          );
-
-        case 'int':
-          return IterableIntArgument(
-            intr: fieldIntr,
-            iterableType: IterableType.values.byName(typeName.toLowerCase()),
-            optionName: optionName,
-          );
-
-        case 'String':
-          return IterableStringArgument(
-            intr: fieldIntr,
-            iterableType: IterableType.values.byName(typeName.toLowerCase()),
-            optionName: optionName,
-          );
-      }
-
     case 'String':
-      if (!isValid) {
-        return InvalidTypeArgument(intr: fieldIntr);
-      }
-
       return StringArgument(
         intr: fieldIntr,
         optionName: optionName,
       );
   }
 
-  unsupportedType();
-  return InvalidTypeArgument(intr: fieldIntr);
+  throw Exception();
 }
