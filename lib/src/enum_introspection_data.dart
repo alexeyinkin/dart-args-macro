@@ -1,6 +1,5 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:collection/collection.dart';
 import 'package:macros/macros.dart';
 
 class EnumIntrospectionData {
@@ -27,7 +26,7 @@ extension EnumIntrospectionExtension on DeclarationBuilder {
   ) async {
     final fields = await fieldsOf(deAliasedTypeDeclaration);
     final values = (await Future.wait(fields.map(introspectEnumField)))
-        .whereNotNull()
+        .nonNulls
         .toList(growable: false);
 
     return EnumIntrospectionData(
