@@ -165,7 +165,7 @@ Argument _fieldToArgument(
     return InvalidTypeArgument(intr: fieldIntr);
   }
 
-  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
+  final typeDecl = fieldIntr.deAliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
 
   if (field.hasInitializer) {
