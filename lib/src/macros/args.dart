@@ -135,7 +135,7 @@ Argument _fieldToArgument(
   ResolvedFieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
 }) {
-  final typeDecl = fieldIntr.unaliasedTypeDeclaration;
+  final typeDecl = fieldIntr.deAliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
   final typeName = typeDecl.identifier.name;
 
