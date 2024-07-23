@@ -3,7 +3,7 @@
 import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
-import 'arguments.dart';
+import 'argument.dart';
 import 'resolved_identifiers.dart';
 import 'static_types.dart';
 
@@ -16,7 +16,7 @@ class IntrospectionData {
     required this.staticTypes,
   });
 
-  final Arguments arguments;
+  final Map<String, Argument> arguments;
   final ClassDeclaration clazz;
   final Map<String, FieldIntrospectionData> fields;
   final ResolvedIdentifiers ids;

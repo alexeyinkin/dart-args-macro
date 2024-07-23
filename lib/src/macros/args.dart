@@ -6,7 +6,6 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
-import '../arguments.dart';
 import '../enum_introspection_data.dart';
 import '../identifiers.dart';
 import '../introspection_data.dart';
@@ -242,7 +241,7 @@ Future<IntrospectionData> _introspect(
   );
 }
 
-Future<Arguments> _fieldsToArguments(
+Future<Map<String, Argument>> _fieldsToArguments(
   Map<String, FieldIntrospectionData> fields, {
   required DeclarationBuilder builder,
   required StaticTypes staticTypes,
@@ -257,10 +256,7 @@ Future<Arguments> _fieldsToArguments(
     );
   }
 
-  final arguments = (await waitMap(futures)).whereNotNull();
-  return Arguments(
-    arguments: arguments,
-  );
+  return (await waitMap(futures)).whereNotNull();
 }
 
 Future<Argument?> _fieldToArgument(

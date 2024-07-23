@@ -24,7 +24,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
     final name = intr.clazz.identifier.name;
     final ids = intr.ids;
 
-    final arguments = intr.arguments.arguments.values.where(
+    final arguments = intr.arguments.values.where(
       (a) =>
           a.intr.constructorHandling ==
           FieldConstructorHandling.namedOrPositional,

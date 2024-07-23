@@ -18,7 +18,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
 
   // ignore: public_member_api_docs
   List<Object> generate() {
-    final arguments = intr.arguments.arguments.values.where((a) => a.isValid);
+    final arguments = intr.arguments.values.where((a) => a.isValid);
 
     return [
       //

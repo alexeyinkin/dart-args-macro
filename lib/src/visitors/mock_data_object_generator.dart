@@ -46,7 +46,7 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
   // ignore: public_member_api_docs
   List<Object> generate() {
     final name = intr.clazz.identifier.name;
-    final arguments = intr.arguments.arguments.values.where(
+    final arguments = intr.arguments.values.where(
       (a) =>
           a.intr.constructorOptionality ==
               FieldConstructorOptionality.required &&

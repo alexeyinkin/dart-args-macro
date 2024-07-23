@@ -25,7 +25,7 @@ class ToDebugStringGenerator {
       //
       ids.String, ' toDebugString() {\n',
       '  final buffer = ', ids.StringBuffer, '();\n\n',
-      for (final argument in intr.arguments.arguments.values)
+      for (final argument in intr.arguments.values)
         if (argument.isValid)
           ...[..._fieldToDebugString(argument), '\n'].indent(),
       '  return buffer.toString();\n',
