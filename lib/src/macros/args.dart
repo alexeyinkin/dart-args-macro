@@ -58,9 +58,9 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         //
         'augment class $parserName {\n',
         '  final parser = ', intr.ids.ArgParser, '();\n',
-        ..._getConstructor(intr.clazz).indent(),
-        ...AddOptionsGenerator(intr).generate().indent(),
-        ...ParseGenerator(intr).generate().indent(),
+        ..._getConstructor(intr.clazz),
+        ...AddOptionsGenerator(intr).generate(),
+        ...ParseGenerator(intr).generate(),
         '}\n',
       ]),
     );
@@ -108,12 +108,8 @@ Future<IntrospectionData> _introspect(
   MemberDeclarationBuilder builder,
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
-  final fields = await  builder.introspectFields(clazz);
-
-  final arguments = await _fieldsToArguments(
-    fields,
-    builder: builder,
-  );
+  final fields = await builder.introspectFields(clazz);
+  final arguments = await _fieldsToArguments(fields, builder);
 
   return IntrospectionData(
     arguments: arguments,
@@ -124,9 +120,9 @@ Future<IntrospectionData> _introspect(
 }
 
 Future<Map<String, Argument>> _fieldsToArguments(
-  Map<String, FieldIntrospectionData> fields, {
-  required DeclarationBuilder builder,
-}) async {
+  Map<String, FieldIntrospectionData> fields,
+  DeclarationBuilder builder,
+) async {
   final futures = <String, Future<Argument>>{};
 
   for (final entry in fields.entries) {
@@ -145,8 +141,8 @@ Future<Argument> _fieldToArgument(
 }) async {
   final typeDecl = fieldIntr.unaliasedTypeDeclaration;
   final optionName = _camelToKebabCase(fieldIntr.name);
-
   final typeName = typeDecl.identifier.name;
+
   switch (typeName) {
     case 'int':
       return IntArgument(

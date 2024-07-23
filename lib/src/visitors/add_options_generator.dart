@@ -15,15 +15,16 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'void _addOptions() {\n',
-      for (final argument in intr.arguments.values)
-        ...[...argument.accept(this), '\n'].indent(),
+      for (final argument in intr.arguments.values) ...[
+        ...argument.accept(this),
+        '\n',
+      ],
       '}\n',
     ];
   }
 
   @override
-  List<Object> visitInt(IntArgument argument) =>
-      _visitStringInt(argument);
+  List<Object> visitInt(IntArgument argument) => _visitStringInt(argument);
 
   @override
   List<Object> visitString(StringArgument argument) =>
