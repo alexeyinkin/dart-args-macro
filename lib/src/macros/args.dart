@@ -5,9 +5,11 @@ import 'package:macro_util/macro_util.dart';
 import 'package:macros/macros.dart';
 
 import '../argument.dart';
+import '../enum_introspection_data.dart';
 import '../introspection_data.dart';
 import '../libraries.dart';
 import '../resolved_identifiers.dart';
+import '../static_types.dart';
 import '../util.dart';
 import '../visitors/add_options_generator.dart';
 import '../visitors/parse_generator.dart';
@@ -110,27 +112,39 @@ Future<IntrospectionData> _introspect(
   MemberDeclarationBuilder builder,
 ) async {
   final ids = await ResolvedIdentifiers.resolve(builder);
-  final fields = await builder.introspectFields(clazz);
-  final arguments = await _fieldsToArguments(fields, builder);
+
+  final (fields, staticTypes) = await (
+    builder.introspectFields(clazz),
+    StaticTypes.resolve(builder, ids),
+  ).wait;
+
+  final arguments = await _fieldsToArguments(
+    fields,
+    builder: builder,
+    staticTypes: staticTypes,
+  );
 
   return IntrospectionData(
     arguments: arguments,
     clazz: clazz,
     fields: fields,
     ids: ids,
+    staticTypes: staticTypes,
   );
 }
 
 Future<Map<String, Argument>> _fieldsToArguments(
-  Map<String, FieldIntrospectionData> fields,
-  DeclarationBuilder builder,
-) async {
+  Map<String, FieldIntrospectionData> fields, {
+  required DeclarationBuilder builder,
+  required StaticTypes staticTypes,
+}) async {
   final futures = <String, Future<Argument>>{};
 
   for (final entry in fields.entries) {
     futures[entry.key] = _fieldToArgument(
       entry.value,
       builder: builder,
+      staticTypes: staticTypes,
     );
   }
 
@@ -140,6 +154,7 @@ Future<Map<String, Argument>> _fieldsToArguments(
 Future<Argument> _fieldToArgument(
   FieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
+  required StaticTypes staticTypes,
 }) async {
   final field = fieldIntr.fieldDeclaration;
   final target = field.asDiagnosticTarget;
@@ -165,9 +180,9 @@ Future<Argument> _fieldToArgument(
     }
 
     reportError(
-      'The only allowed types are: String, int, '
-      'List<String>, List<int>, '
-      'Set<String>, Set<int>.'
+      'The only allowed types are: String, int, Enum, '
+      'List<String>, List<int>, List<Enum>, '
+      'Set<String>, Set<int>, Set<Enum>.',
     );
   }
 
@@ -190,6 +205,15 @@ Future<Argument> _fieldToArgument(
   }
 
   if (typeDecl.library.uri != Libraries.core) {
+    if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
+      return EnumArgument(
+        enumIntr:
+            await builder.introspectEnum(fieldIntr.deAliasedTypeDeclaration),
+        intr: fieldIntr,
+        optionName: optionName,
+      );
+    }
+
     unsupportedType();
     return InvalidTypeArgument(intr: fieldIntr);
   }
@@ -209,7 +233,8 @@ Future<Argument> _fieldToArgument(
       if (paramType == null) {
         reportError(
           'A $typeName requires a type parameter: '
-          '$typeName<String>, $typeName<int>.',
+          '$typeName<String>, $typeName<int>, '
+          '$typeName<Enum>.',
         );
 
         return InvalidTypeArgument(intr: fieldIntr);
@@ -232,6 +257,16 @@ Future<Argument> _fieldToArgument(
       final paramTypeDecl = await builder.deAliasedTypeDeclarationOf(paramType);
 
       if (paramTypeDecl.library.uri != Libraries.core) {
+        final paramStaticType = await builder.resolve(paramType.code);
+        if (await paramStaticType.isSubtypeOf(staticTypes.Enum)) {
+          return IterableEnumArgument(
+            enumIntr: await builder.introspectEnum(paramTypeDecl),
+            intr: fieldIntr,
+            iterableType: IterableType.values.byName(typeName.toLowerCase()),
+            optionName: optionName,
+          );
+        }
+
         unsupportedType();
         return InvalidTypeArgument(intr: fieldIntr);
       }

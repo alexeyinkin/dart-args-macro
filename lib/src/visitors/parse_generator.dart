@@ -53,6 +53,18 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
   }
 
   @override
+  List<Object> visitEnum(EnumArgument argument) {
+    final valueGetter = _getOptionValueGetter(argument);
+
+    return [
+      argument.intr.name,
+      ': ',
+      argument.intr.deAliasedTypeDeclaration.identifier,
+      '.values.byName($valueGetter!)',
+    ];
+  }
+
+  @override
   List<Object> visitInt(IntArgument argument) {
     final valueGetter = _getOptionValueGetter(argument);
 
@@ -70,6 +82,33 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       argument.intr.name,
       ': _silenceUninitializedError',
     ];
+  }
+
+  @override
+  List<Object> visitIterableEnum(IterableEnumArgument argument) {
+    final valueGetter = _getMultiOptionValueGetter(argument);
+
+    final result = [
+      //
+      argument.intr.name,
+      ': $valueGetter.map((e) => ',
+      argument.enumIntr.deAliasedTypeDeclaration.identifier,
+      '.values.byName(e)',
+      ')',
+    ];
+
+    switch (argument.iterableType) {
+      case IterableType.list:
+        return [
+          ...result,
+          '.toList(growable: false)',
+        ];
+      case IterableType.set:
+        return [
+          ...result,
+          '.toSet()',
+        ];
+    }
   }
 
   @override

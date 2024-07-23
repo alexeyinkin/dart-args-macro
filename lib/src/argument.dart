@@ -1,5 +1,6 @@
 import 'package:macro_util/macro_util.dart';
 
+import 'enum_introspection_data.dart';
 import 'visitors/visitor.dart';
 
 /// An option or a flag to be parsed.
@@ -32,6 +33,22 @@ abstract class ResolvedTypeArgument extends Argument {
   @override
   ResolvedFieldIntrospectionData get intr =>
       super.intr as ResolvedFieldIntrospectionData;
+}
+
+/// An [Enum] argument.
+class EnumArgument extends ResolvedTypeArgument {
+  EnumArgument({
+    required super.intr,
+    required super.optionName,
+    required this.enumIntr,
+  });
+
+  final EnumIntrospectionData enumIntr;
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitEnum(this);
+  }
 }
 
 /// An [int] argument.
@@ -73,6 +90,23 @@ abstract class IterableArgument extends ResolvedTypeArgument {
   });
 
   final IterableType iterableType;
+}
+
+/// A List<Enum> or Set<Enum> argument.
+class IterableEnumArgument extends IterableArgument {
+  IterableEnumArgument({
+    required super.intr,
+    required super.iterableType,
+    required super.optionName,
+    required this.enumIntr,
+  });
+
+  final EnumIntrospectionData enumIntr;
+
+  @override
+  R accept<R>(ArgumentVisitor<R> visitor) {
+    return visitor.visitIterableEnum(this);
+  }
 }
 
 /// A List<int> or Set<int> argument.
