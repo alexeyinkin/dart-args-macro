@@ -12,6 +12,7 @@ import '../resolved_identifiers.dart';
 import '../static_types.dart';
 import '../util.dart';
 import '../visitors/add_options_generator.dart';
+import '../visitors/mock_data_object_generator.dart';
 import '../visitors/parse_generator.dart';
 
 /// Creates a command line argument parser from your data class.
@@ -39,15 +40,19 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   ) async {
     final intr = await _introspect(clazz, builder);
 
-    await _declareConstructor(clazz, builder);
+    await _declareConstructors(clazz, builder);
     _augmentParser(builder, intr);
   }
 
-  Future<void> _declareConstructor(
+  Future<void> _declareConstructors(
     ClassDeclaration clazz,
     MemberDeclarationBuilder builder,
   ) async {
-    await const Constructor().buildDeclarationsForClass(clazz, builder);
+    await Future.wait([
+      //
+      const Constructor().buildDeclarationsForClass(clazz, builder),
+      MockDataObjectGenerator.createMockConstructor(clazz, builder),
+    ]);
   }
 
   void _augmentParser(
@@ -62,6 +67,7 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         'augment class $parserName {\n',
         '  final parser = ', intr.ids.ArgParser, '();\n',
         '  static var _silenceUninitializedError;\n',
+        ...MockDataObjectGenerator(intr).generate(),
         ..._getConstructor(intr.clazz),
         ...AddOptionsGenerator(intr).generate(),
         ...ParseGenerator(intr).generate(),
@@ -199,12 +205,40 @@ Future<Argument> _fieldToArgument(
     return InvalidTypeArgument(intr: fieldIntr);
   }
 
-  if (field.hasInitializer) {
-    reportError('Initializers are not allowed for argument fields.');
-    return InvalidTypeArgument(intr: fieldIntr);
+  bool isValid = true;
+
+  if (field.hasInitializer && field.hasFinal) {
+    reportError(
+      'A field with an initializer cannot be final '
+      'because it needs to be overwritten when parsing the argument.',
+    );
+
+    isValid = false;
+  }
+
+  switch (typeDecl.identifier.name) {
+    case 'List':
+    case 'Set':
+      // These have more specific messages for nullability later.
+      break;
+
+    default:
+      if (field.hasInitializer && type.isNullable) {
+        reportError(
+          'A field with an initializer must be non-nullable '
+          'because nullability and the default value '
+          'are mutually exclusive ways to handle a missing value.',
+        );
+
+        isValid = false;
+      }
   }
 
   if (typeDecl.library.uri != Libraries.core) {
+    if (!isValid) {
+      return InvalidTypeArgument(intr: fieldIntr);
+    }
+
     if (await fieldIntr.nonNullableStaticType.isSubtypeOf(staticTypes.Enum)) {
       return EnumArgument(
         enumIntr:
@@ -222,6 +256,10 @@ Future<Argument> _fieldToArgument(
 
   switch (typeName) {
     case 'int':
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return IntArgument(
         intr: fieldIntr,
         optionName: optionName,
@@ -229,6 +267,15 @@ Future<Argument> _fieldToArgument(
 
     case 'List':
     case 'Set':
+      if (type.isNullable) {
+        reportError(
+          'A $typeName cannot be nullable because it is just empty '
+          'when no options with this name are passed.',
+        );
+
+        isValid = false;
+      }
+
       final paramType = type.typeArguments.firstOrNull;
       if (paramType == null) {
         reportError(
@@ -246,6 +293,10 @@ Future<Argument> _fieldToArgument(
           'element is either parsed successfully or breaks the execution.',
         );
 
+        isValid = false;
+      }
+
+      if (!isValid) {
         return InvalidTypeArgument(intr: fieldIntr);
       }
 
@@ -288,6 +339,10 @@ Future<Argument> _fieldToArgument(
       }
 
     case 'String':
+      if (!isValid) {
+        return InvalidTypeArgument(intr: fieldIntr);
+      }
+
       return StringArgument(
         intr: fieldIntr,
         optionName: optionName,

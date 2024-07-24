@@ -4,12 +4,15 @@ import 'package:macro_util/macro_util.dart';
 
 import '../argument.dart';
 import '../introspection_data.dart';
+import 'positional_param_generator.dart';
 import 'visitor.dart';
 
 /// Generates the code that parses option values into the data class instance.
-class ParseGenerator extends ArgumentVisitor<List<Object>> {
+class ParseGenerator extends ArgumentVisitor<List<Object>>
+    with PositionalParamGenerator {
   ParseGenerator(this.intr);
 
+  @override
   final IntrospectionData intr;
 
   List<Object> generate() {
@@ -27,7 +30,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
       name, ' parse(', ids.List, '<', ids.String, '> argv) {\n',
       '  final wrapped = parser.parse(argv);\n',
       '  return $name(\n',
-      for (final param in _getPositionalParams()) ...[...param, ',\n'],
+      for (final param in getPositionalParams()) ...[...param, ',\n'],
       for (final argument in arguments) ...[
         ...argument.accept(this),
         ',\n',
@@ -37,21 +40,6 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     ];
   }
 
-  List<List<Object>> _getPositionalParams() {
-    final result = <List<Object>>[];
-    final fields = intr.fields.values.where(
-      (f) => f.constructorHandling == FieldConstructorHandling.positional,
-    );
-
-    for (final _ in fields) {
-      result.add([
-        '_silenceUninitializedError',
-      ]);
-    }
-
-    return result;
-  }
-
   @override
   List<Object> visitEnum(EnumArgument argument) {
     final valueGetter = _getOptionValueGetter(argument);
@@ -59,6 +47,8 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     return [
       argument.intr.name,
       ': ',
+      if (argument.intr.fieldDeclaration.type.isNullable)
+        '$valueGetter == null ? null : ',
       argument.intr.deAliasedTypeDeclaration.identifier,
       '.values.byName($valueGetter!)',
     ];
@@ -71,6 +61,8 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
     return [
       argument.intr.name,
       ': ',
+      if (argument.intr.fieldDeclaration.type.isNullable)
+        '$valueGetter == null ? null : ',
       intr.ids.int,
       '.parse($valueGetter!)',
     ];
@@ -159,7 +151,8 @@ class ParseGenerator extends ArgumentVisitor<List<Object>> {
 
     return [
       argument.intr.name,
-      ': $valueGetter!',
+      ': $valueGetter',
+      if (!argument.intr.fieldDeclaration.type.isNullable) '!',
     ];
   }
 

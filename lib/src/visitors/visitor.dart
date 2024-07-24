@@ -1,7 +1,10 @@
 import '../argument.dart';
+import '../introspection_data.dart';
 
 /// The base for all objects that generate code specific to argument types.
 abstract class ArgumentVisitor<R> {
+  IntrospectionData get intr;
+
   R visitEnum(EnumArgument argument);
   R visitInt(IntArgument argument);
   R visitInvalidType(InvalidTypeArgument argument);

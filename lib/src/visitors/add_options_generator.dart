@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../argument.dart';
 import '../introspection_data.dart';
+import 'mock_data_object_generator.dart';
 import 'visitor.dart';
 
 /// Generates '_addOptions' function of the parser
@@ -9,6 +10,7 @@ import 'visitor.dart';
 class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
   AddOptionsGenerator(this.intr);
 
+  @override
   final IntrospectionData intr;
 
   List<Object> generate() {
@@ -25,6 +27,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
 
   @override
   List<Object> visitEnum(EnumArgument argument) {
+    final field = argument.intr.fieldDeclaration;
     final values =
         argument.enumIntr.values.map((v) => v.name).toList(growable: false);
 
@@ -33,7 +36,15 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       'parser.addOption(\n',
       '  "${argument.optionName}",\n',
       '  allowed: ${jsonEncode(values)},\n',
-      '  mandatory: true,\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '?.name',
+        ',\n',
+      ] else if (!field.type.isNullable)
+        '  mandatory: true,\n',
       ');\n',
     ];
   }
@@ -48,6 +59,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
 
   @override
   List<Object> visitIterableEnum(IterableEnumArgument argument) {
+    final field = argument.intr.fieldDeclaration;
     final values =
         argument.enumIntr.values.map((v) => v.name).toList(growable: false);
 
@@ -56,6 +68,14 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       'parser.addMultiOption(\n',
       '  "${argument.optionName}",\n',
       '  allowed: ${jsonEncode(values)},\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '.map((e) => e.name)',
+        ',\n',
+      ],
       ');\n',
     ];
   }
@@ -73,20 +93,40 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
       _visitStringInt(argument);
 
   List<Object> _visitStringInt(Argument argument) {
+    final field = argument.intr.fieldDeclaration;
+
     return [
       //
       'parser.addOption(\n',
       '  "${argument.optionName}",\n',
-      '  mandatory: true,\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '.toString()',
+        ',\n',
+      ] else if (!field.type.isNullable)
+        '  mandatory: true,\n',
       ');\n',
     ];
   }
 
   List<Object> _visitIterableStringInt(IterableArgument argument) {
+    final field = argument.intr.fieldDeclaration;
+
     return [
       //
       'parser.addMultiOption(\n',
       '  "${argument.optionName}",\n',
+      if (field.hasInitializer) ...[
+        '  defaultsTo: ',
+        MockDataObjectGenerator.fieldName,
+        '.',
+        argument.intr.name,
+        '.map((e) => e.toString())',
+        ',\n',
+      ],
       ');\n',
     ];
   }
