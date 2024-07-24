@@ -15,6 +15,9 @@ import '../visitors/add_options_generator.dart';
 import '../visitors/mock_data_object_generator.dart';
 import '../visitors/parse_generator.dart';
 
+const _helpFlag = 'help';
+const _hFlag = 'h';
+
 /// Creates a command line argument parser from your data class.
 macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
   const Args();
@@ -70,7 +73,10 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
         ...MockDataObjectGenerator(intr).generate(),
         ..._getConstructor(intr.clazz),
         ...AddOptionsGenerator(intr).generate(),
+        ..._getAddHelpFlag(),
         ...ParseGenerator(intr).generate(),
+        ..._getParseWrapped(intr),
+        ..._getPrintUsage(intr),
         '}\n',
       ]),
     );
@@ -88,6 +94,49 @@ macro class Args implements ClassTypesMacro, ClassDeclarationsMacro {
       //
       parserName, '() {\n',
       '  _addOptions();\n',
+      '  _addHelpFlag();\n',
+      '}\n',
+    ];
+  }
+
+  List<Object> _getAddHelpFlag() {
+    return [
+      //
+      'void _addHelpFlag() {\n',
+      '  parser.addFlag(\n',
+      '    "$_helpFlag",\n',
+      '    abbr: "$_hFlag",\n',
+      '    help: "Print this usage information.",\n',
+      '    negatable: false,\n',
+      '  );\n',
+      '}\n',
+    ];
+  }
+
+  List<Object> _getParseWrapped(IntrospectionData intr) {
+    final ids = intr.ids;
+
+    return [
+      //
+      ids.ArgResults, ' _parseWrapped(', ids.List, '<',
+      ids.String, '> argv) {\n',
+      '  final results = parser.parse(argv);\n',
+      '\n',
+      '  if (results.flag("$_helpFlag")) {\n',
+      '    _printUsage(', ids.stdout, ');\n',
+      '    ', ids.exit, '(0);\n',
+      '  }\n',
+      '\n',
+      '  return results;\n',
+      '}\n',
+    ];
+  }
+
+  List<Object> _getPrintUsage(IntrospectionData intr) {
+    return [
+      //
+      'void _printUsage(', intr.ids.IOSink, ' stream) {\n',
+      '  stream.writeln(parser.usage);\n',
       '}\n',
     ];
   }
@@ -144,7 +193,7 @@ Future<Map<String, Argument>> _fieldsToArguments(
   required DeclarationBuilder builder,
   required StaticTypes staticTypes,
 }) async {
-  final futures = <String, Future<Argument>>{};
+  final futures = <String, Future<Argument?>>{};
 
   for (final entry in fields.entries) {
     futures[entry.key] = _fieldToArgument(
@@ -154,15 +203,20 @@ Future<Map<String, Argument>> _fieldsToArguments(
     );
   }
 
-  return waitMap(futures);
+  return (await waitMap(futures)).nonNulls;
 }
 
-Future<Argument> _fieldToArgument(
+Future<Argument?> _fieldToArgument(
   FieldIntrospectionData fieldIntr, {
   required DeclarationBuilder builder,
   required StaticTypes staticTypes,
 }) async {
   final field = fieldIntr.fieldDeclaration;
+
+  if (field.hasStatic) {
+    return null;
+  }
+
   final target = field.asDiagnosticTarget;
 
   if (fieldIntr.name.contains('_')) {

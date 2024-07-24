@@ -28,7 +28,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
     return [
       //
       name, ' parse(', ids.List, '<', ids.String, '> argv) {\n',
-      '  final wrapped = parser.parse(argv);\n',
+      '  final wrapped = _parseWrapped(argv);\n',
       '  return $name(\n',
       for (final param in getPositionalParams()) ...[...param, ',\n'],
       for (final argument in arguments) ...[

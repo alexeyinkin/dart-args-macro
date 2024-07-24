@@ -45,6 +45,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         ',\n',
       ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
+      ..._getHelpMessageIfAny(argument),
       ');\n',
     ];
   }
@@ -76,6 +77,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         '.map((e) => e.name)',
         ',\n',
       ],
+      ..._getHelpMessageIfAny(argument),
       ');\n',
     ];
   }
@@ -108,6 +110,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         ',\n',
       ] else if (!field.type.isNullable)
         '  mandatory: true,\n',
+      ..._getHelpMessageIfAny(argument),
       ');\n',
     ];
   }
@@ -127,7 +130,24 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
         '.map((e) => e.toString())',
         ',\n',
       ],
+      ..._getHelpMessageIfAny(argument),
       ');\n',
+    ];
+  }
+
+  List<Object> _getHelpMessageIfAny(Argument argument) {
+    final helpFieldName = '_${argument.intr.name}Help';
+    final helpField = intr.fields[helpFieldName];
+
+    if (helpField == null || !helpField.fieldDeclaration.hasStatic) {
+      return const [];
+    }
+
+    return [
+      'help: ',
+      intr.clazz.identifier.name,
+      '.',
+      helpFieldName,
     ];
   }
 }
