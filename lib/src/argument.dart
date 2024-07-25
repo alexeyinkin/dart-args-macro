@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:macro_util/macro_util.dart';
 
 import 'enum_introspection_data.dart';
@@ -63,8 +65,8 @@ class BoolArgument extends ResolvedTypeArgument {
       '.',
       intr.name,
       ' ?? false',
-      ' ? "no-$optionName"',
-      ' : "$optionName"',
+      ' ? ${jsonEncode('no-$optionName')}',
+      ' : ${jsonEncode(optionName)}',
     ].join();
   }
 }

@@ -31,7 +31,7 @@ class ParseGenerator extends ArgumentVisitor<List<Object>>
 
     return [
       //
-      name, ' parse(', ids.List, '<', ids.String, '> argv) {\n',
+      '$name parse(', ids.List, '<', ids.String, '> argv) {\n',
       '  try {\n',
       '    final wrapped = _parseWrapped(argv);\n',
       '    return $name(\n',
