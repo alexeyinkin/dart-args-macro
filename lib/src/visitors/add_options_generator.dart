@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../argument.dart';
 import '../introspection_data.dart';
 import 'visitor.dart';
@@ -37,7 +39,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       '  mandatory: true,\n',
       ');\n',
     ];
