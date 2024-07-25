@@ -51,7 +51,7 @@ class MockDataObjectGenerator extends ArgumentVisitor<List<Object>>
     );
 
     return [
-      'late final $fieldName = $name.$_constructorName(\n',
+      'static final $fieldName = $name.$_constructorName(\n',
       for (final param in getPositionalParams()) ...[...param, ',\n'],
       for (final parts in arguments.map((argument) => argument.accept(this)))
         ...[...parts, ',\n'],
