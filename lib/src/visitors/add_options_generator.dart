@@ -76,7 +76,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       '  mandatory: true,\n',
       ');\n',
     ];
@@ -86,7 +86,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addMultiOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       ');\n',
     ];
   }
