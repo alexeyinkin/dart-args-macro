@@ -34,7 +34,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       '  allowed: ${jsonEncode(values)},\n',
       if (field.hasInitializer) ...[
         '  defaultsTo: ',
@@ -66,7 +66,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addMultiOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       '  allowed: ${jsonEncode(values)},\n',
       if (field.hasInitializer) ...[
         '  defaultsTo: ',
@@ -98,7 +98,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       if (field.hasInitializer) ...[
         '  defaultsTo: ',
         MockDataObjectGenerator.fieldName,
@@ -118,7 +118,7 @@ class AddOptionsGenerator extends ArgumentVisitor<List<Object>> {
     return [
       //
       'parser.addMultiOption(\n',
-      '  "${argument.optionName}",\n',
+      '  ${jsonEncode(argument.optionName)},\n',
       if (field.hasInitializer) ...[
         '  defaultsTo: ',
         MockDataObjectGenerator.fieldName,
